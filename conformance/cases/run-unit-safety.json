@@ -1,0 +1,669 @@
+{
+ "verb": "run-unit",
+ "about": "One unit's host under the rules a run must keep: robots.txt first, listed host only, a 429 or 5xx never a verdict, the budget never exceeded.",
+ "defaults": {
+  "contract": "0",
+  "verb": "run-unit",
+  "caps": {
+   "timeSeconds": 60,
+   "outputBytes": 1048576
+  },
+  "network": {
+   "replay": {
+    "start": "2026-10-31T12:00:00Z",
+    "exchanges": {}
+   }
+  },
+  "input": {
+   "id": "host:docs.example.com",
+   "shardKey": "docs.example.com",
+   "pacing": {
+    "minIntervalSeconds": 2.0
+   },
+   "budget": {
+    "requests": 10
+   },
+   "host": {
+    "host": "docs.example.com",
+    "format": "html",
+    "maxBytes": 2000000,
+    "timeoutSeconds": 30
+   },
+   "userAgent": "practice-library-graphs/1 (+https://github.com/practice-library/graphs)",
+   "retryAfterMaxSeconds": 60,
+   "facts": [
+    {
+     "node": "rule.example.a",
+     "source": "https://docs.example.com/a",
+     "measuredAt": "2026-09-01",
+     "quote": {
+      "text": "Each key may send 20 requests per second."
+     }
+    },
+    {
+     "node": "rule.example.b",
+     "source": "https://docs.example.com/b",
+     "measuredAt": "2026-09-02",
+     "quote": {
+      "text": "The free plan includes 1,000 calls."
+     }
+    }
+   ]
+  }
+ },
+ "cases": [
+  {
+   "name": "both quotes on their pages: unchanged, one request per page after robots.txt",
+   "request": {
+    "network": {
+     "replay": {
+      "exchanges": {
+       "https://docs.example.com/robots.txt": [
+        {
+         "status": 200,
+         "headers": {
+          "content-type": "text/plain"
+         },
+         "body": "User-agent: *\nDisallow: /private/\n"
+        }
+       ],
+       "https://docs.example.com/a": [
+        {
+         "status": 200,
+         "headers": {
+          "content-type": "text/html; charset=utf-8"
+         },
+         "body": "<p>Each key may send <b>20</b> requests per second.</p>"
+        }
+       ],
+       "https://docs.example.com/b": [
+        {
+         "status": 200,
+         "headers": {
+          "content-type": "text/html; charset=utf-8"
+         },
+         "body": "<p>The free plan includes 1,000 calls.</p>"
+        }
+       ]
+      }
+     }
+    }
+   },
+   "expect": {
+    "data": {
+     "requests": 3,
+     "robots": {
+      "verdict": "allowed"
+     },
+     "results": [
+      {
+       "node": "rule.example.a",
+       "outcome": "unchanged"
+      },
+      {
+       "node": "rule.example.b",
+       "outcome": "unchanged"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "a page read without its quote is changed",
+   "request": {
+    "network": {
+     "replay": {
+      "exchanges": {
+       "https://docs.example.com/robots.txt": [
+        {
+         "status": 200,
+         "headers": {
+          "content-type": "text/plain"
+         },
+         "body": "User-agent: *\nDisallow: /private/\n"
+        }
+       ],
+       "https://docs.example.com/a": [
+        {
+         "status": 200,
+         "headers": {
+          "content-type": "text/html; charset=utf-8"
+         },
+         "body": "<p>Each key may send <b>20</b> requests per second.</p>"
+        }
+       ],
+       "https://docs.example.com/b": [
+        {
+         "status": 200,
+         "headers": {
+          "content-type": "text/html; charset=utf-8"
+         },
+         "body": "<p>The free plan includes 1,500 calls.</p>"
+        }
+       ]
+      }
+     }
+    }
+   },
+   "expect": {
+    "data": {
+     "results": [
+      {
+       "outcome": "unchanged"
+      },
+      {
+       "node": "rule.example.b",
+       "outcome": "changed"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "$10 is not on a page that says $100",
+   "request": {
+    "network": {
+     "replay": {
+      "exchanges": {
+       "https://docs.example.com/robots.txt": [
+        {
+         "status": 200,
+         "headers": {
+          "content-type": "text/plain"
+         },
+         "body": "User-agent: *\nDisallow: /private/\n"
+        }
+       ],
+       "https://docs.example.com/a": [
+        {
+         "status": 200,
+         "headers": {
+          "content-type": "text/html; charset=utf-8"
+         },
+         "body": "<p>It costs $100 a month.</p>"
+        }
+       ]
+      }
+     }
+    },
+    "input": {
+     "facts": [
+      {
+       "node": "rule.example.a",
+       "source": "https://docs.example.com/a",
+       "measuredAt": "2026-09-01",
+       "quote": {
+        "text": "It costs $10"
+       }
+      }
+     ]
+    }
+   },
+   "expect": {
+    "data": {
+     "results": [
+      {
+       "outcome": "changed"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "robots.txt disallowing a page aborts before any page",
+   "request": {
+    "network": {
+     "replay": {
+      "exchanges": {
+       "https://docs.example.com/robots.txt": [
+        {
+         "status": 200,
+         "body": "User-agent: *\nDisallow: /b\n"
+        }
+       ],
+       "https://docs.example.com/a": [
+        {
+         "status": 200,
+         "headers": {
+          "content-type": "text/html; charset=utf-8"
+         },
+         "body": "<p>Each key may send <b>20</b> requests per second.</p>"
+        }
+       ],
+       "https://docs.example.com/b": [
+        {
+         "status": 200,
+         "headers": {
+          "content-type": "text/html; charset=utf-8"
+         },
+         "body": "<p>The free plan includes 1,000 calls.</p>"
+        }
+       ]
+      }
+     }
+    }
+   },
+   "expect": {
+    "data": {
+     "requests": 1,
+     "aborted": {
+      "reason": {
+       "$startsWith": "blocked:"
+      }
+     },
+     "results": []
+    }
+   }
+  },
+  {
+   "name": "robots.txt answering 503 aborts before any page",
+   "request": {
+    "network": {
+     "replay": {
+      "exchanges": {
+       "https://docs.example.com/robots.txt": [
+        {
+         "status": 503,
+         "body": ""
+        }
+       ],
+       "https://docs.example.com/a": [
+        {
+         "status": 200,
+         "headers": {
+          "content-type": "text/html; charset=utf-8"
+         },
+         "body": "<p>Each key may send <b>20</b> requests per second.</p>"
+        }
+       ]
+      }
+     }
+    }
+   },
+   "expect": {
+    "data": {
+     "requests": 1,
+     "robots": {
+      "verdict": "unreachable"
+     },
+     "results": []
+    }
+   }
+  },
+  {
+   "name": "a 500 is unreadable, never changed",
+   "request": {
+    "network": {
+     "replay": {
+      "exchanges": {
+       "https://docs.example.com/robots.txt": [
+        {
+         "status": 200,
+         "headers": {
+          "content-type": "text/plain"
+         },
+         "body": "User-agent: *\nDisallow: /private/\n"
+        }
+       ],
+       "https://docs.example.com/a": [
+        {
+         "status": 500,
+         "body": "oops"
+        }
+       ],
+       "https://docs.example.com/b": [
+        {
+         "status": 200,
+         "headers": {
+          "content-type": "text/html; charset=utf-8"
+         },
+         "body": "<p>The free plan includes 1,000 calls.</p>"
+        }
+       ]
+      }
+     }
+    }
+   },
+   "expect": {
+    "data": {
+     "results": [
+      {
+       "node": "rule.example.a",
+       "outcome": "unreadable",
+       "httpStatus": 500
+      },
+      {
+       "outcome": "unchanged"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "a 429 with a long Retry-After is unreadable without a retry, and stops the host",
+   "request": {
+    "network": {
+     "replay": {
+      "exchanges": {
+       "https://docs.example.com/robots.txt": [
+        {
+         "status": 200,
+         "headers": {
+          "content-type": "text/plain"
+         },
+         "body": "User-agent: *\nDisallow: /private/\n"
+        }
+       ],
+       "https://docs.example.com/a": [
+        {
+         "status": 429,
+         "headers": {
+          "retry-after": "3600"
+         }
+        }
+       ],
+       "https://docs.example.com/b": [
+        {
+         "status": 200,
+         "headers": {
+          "content-type": "text/html; charset=utf-8"
+         },
+         "body": "<p>The free plan includes 1,000 calls.</p>"
+        }
+       ]
+      }
+     }
+    }
+   },
+   "expect": {
+    "data": {
+     "requests": 2,
+     "results": [
+      {
+       "node": "rule.example.a",
+       "outcome": "unreadable",
+       "retryAfterSeconds": 3600
+      },
+      {
+       "node": "rule.example.b",
+       "outcome": "unreadable"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "a redirect to an unlisted host is not followed",
+   "request": {
+    "network": {
+     "replay": {
+      "exchanges": {
+       "https://docs.example.com/robots.txt": [
+        {
+         "status": 200,
+         "headers": {
+          "content-type": "text/plain"
+         },
+         "body": "User-agent: *\nDisallow: /private/\n"
+        }
+       ],
+       "https://docs.example.com/a": [
+        {
+         "status": 302,
+         "headers": {
+          "location": "https://evil.example.net/a"
+         }
+        }
+       ],
+       "https://docs.example.com/b": [
+        {
+         "status": 200,
+         "headers": {
+          "content-type": "text/html; charset=utf-8"
+         },
+         "body": "<p>The free plan includes 1,000 calls.</p>"
+        }
+       ]
+      }
+     }
+    }
+   },
+   "expect": {
+    "data": {
+     "requests": 3,
+     "results": [
+      {
+       "node": "rule.example.a",
+       "outcome": "unreadable",
+       "reason": {
+        "$startsWith": "blocked:"
+       }
+      },
+      {
+       "outcome": "unchanged"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "a budget of 2 reads robots.txt and the oldest fact's page only",
+   "request": {
+    "network": {
+     "replay": {
+      "exchanges": {
+       "https://docs.example.com/robots.txt": [
+        {
+         "status": 200,
+         "headers": {
+          "content-type": "text/plain"
+         },
+         "body": "User-agent: *\nDisallow: /private/\n"
+        }
+       ],
+       "https://docs.example.com/a": [
+        {
+         "status": 200,
+         "headers": {
+          "content-type": "text/html; charset=utf-8"
+         },
+         "body": "<p>Each key may send <b>20</b> requests per second.</p>"
+        }
+       ],
+       "https://docs.example.com/b": [
+        {
+         "status": 200,
+         "headers": {
+          "content-type": "text/html; charset=utf-8"
+         },
+         "body": "<p>The free plan includes 1,000 calls.</p>"
+        }
+       ]
+      }
+     }
+    },
+    "input": {
+     "budget": {
+      "requests": 2
+     }
+    }
+   },
+   "expect": {
+    "data": {
+     "requests": 2,
+     "results": [
+      {
+       "node": "rule.example.a",
+       "outcome": "unchanged"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "a table quote is found as consecutive cells of one row",
+   "request": {
+    "network": {
+     "replay": {
+      "exchanges": {
+       "https://docs.example.com/robots.txt": [
+        {
+         "status": 200,
+         "headers": {
+          "content-type": "text/plain"
+         },
+         "body": "User-agent: *\nDisallow: /private/\n"
+        }
+       ],
+       "https://docs.example.com/t": [
+        {
+         "status": 200,
+         "headers": {
+          "content-type": "text/html; charset=utf-8"
+         },
+         "body": "<table><tr><th>Plan</th><th>Jobs</th><th>macOS</th></tr><tr><td>Free</td><td>20</td><td>5</td></tr></table>"
+        }
+       ]
+      }
+     }
+    },
+    "input": {
+     "facts": [
+      {
+       "node": "plan.example.row",
+       "source": "https://docs.example.com/t",
+       "measuredAt": "2026-09-03",
+       "quote": {
+        "cells": [
+         "Free",
+         "20",
+         "5"
+        ]
+       }
+      }
+     ]
+    }
+   },
+   "expect": {
+    "data": {
+     "results": [
+      {
+       "node": "plan.example.row",
+       "outcome": "unchanged"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "a table quote whose cell changed is changed",
+   "request": {
+    "network": {
+     "replay": {
+      "exchanges": {
+       "https://docs.example.com/robots.txt": [
+        {
+         "status": 200,
+         "headers": {
+          "content-type": "text/plain"
+         },
+         "body": "User-agent: *\nDisallow: /private/\n"
+        }
+       ],
+       "https://docs.example.com/t": [
+        {
+         "status": 200,
+         "headers": {
+          "content-type": "text/html; charset=utf-8"
+         },
+         "body": "<table><tr><td>Free</td><td>25</td><td>5</td></tr></table>"
+        }
+       ]
+      }
+     }
+    },
+    "input": {
+     "facts": [
+      {
+       "node": "plan.example.row",
+       "source": "https://docs.example.com/t",
+       "measuredAt": "2026-09-03",
+       "quote": {
+        "cells": [
+         "Free",
+         "20",
+         "5"
+        ]
+       }
+      }
+     ]
+    }
+   },
+   "expect": {
+    "data": {
+     "results": [
+      {
+       "node": "plan.example.row",
+       "outcome": "changed"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "table cells split across two rows are not a match",
+   "request": {
+    "network": {
+     "replay": {
+      "exchanges": {
+       "https://docs.example.com/robots.txt": [
+        {
+         "status": 200,
+         "headers": {
+          "content-type": "text/plain"
+         },
+         "body": "User-agent: *\nDisallow: /private/\n"
+        }
+       ],
+       "https://docs.example.com/t": [
+        {
+         "status": 200,
+         "headers": {
+          "content-type": "text/html; charset=utf-8"
+         },
+         "body": "<table><tr><td>Free</td><td>20</td></tr><tr><td>5</td></tr></table>"
+        }
+       ]
+      }
+     }
+    },
+    "input": {
+     "facts": [
+      {
+       "node": "plan.example.row",
+       "source": "https://docs.example.com/t",
+       "measuredAt": "2026-09-03",
+       "quote": {
+        "cells": [
+         "Free",
+         "20",
+         "5"
+        ]
+       }
+      }
+     ]
+    }
+   },
+   "expect": {
+    "data": {
+     "results": [
+      {
+       "node": "plan.example.row",
+       "outcome": "changed"
+      }
+     ]
+    }
+   }
+  }
+ ]
+}

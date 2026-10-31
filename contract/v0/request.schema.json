@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/practice-library/machinery/contract/v0/request.schema.json",
+  "title": "Plugin request, contract v0",
+  "description": "What a gateway writes to a plugin's stdin: one JSON object. The plugin reads nothing else: no files, no environment, no secrets. It opens a connection only to a host listed in network.hosts, and to none at all when network.replay is given.",
+  "type": "object",
+  "required": ["contract", "verb", "caps"],
+  "additionalProperties": false,
+  "properties": {
+    "contract": {"type": "string", "pattern": "^[0-9]+$", "description": "The contract version of this request. A plugin that does not speak it answers with exit code 3."},
+    "verb": {"enum": ["describe", "plan", "run-unit", "merge", "run"]},
+    "caps": {
+      "type": "object",
+      "description": "Set by the caller. The plugin finishes within timeSeconds and writes at most outputBytes; the caller kills it after timeSeconds and refuses a larger output.",
+      "required": ["timeSeconds", "outputBytes"],
+      "additionalProperties": false,
+      "properties": {
+        "timeSeconds": {"type": "integer", "minimum": 1, "maximum": 3600},
+        "outputBytes": {"type": "integer", "minimum": 1024, "maximum": 16777216}
+      }
+    },
+    "network": {
+      "description": "Absent: no network at all. hosts: the only hosts the plugin may connect to. replay: recorded responses that stand in for the network, with a virtual clock, for conformance runs; the plugin then opens no connection and does not really wait.",
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["hosts"],
+          "additionalProperties": false,
+          "properties": {"hosts": {"type": "array", "items": {"$ref": "#/$defs/host"}}}
+        },
+        {
+          "type": "object",
+          "required": ["replay"],
+          "additionalProperties": false,
+          "properties": {
+            "replay": {
+              "type": "object",
+              "required": ["start", "exchanges"],
+              "additionalProperties": false,
+              "properties": {
+                "start": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$", "description": "The virtual clock's start; waits advance it instead of passing"},
+                "exchanges": {
+                  "type": "object",
+                  "description": "url to its responses, answered in order; a request for a URL with no response left gets a network error",
+                  "additionalProperties": {"type": "array", "items": {"$ref": "#/$defs/recorded"}}
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "input": {"type": "object", "description": "The verb's input; its schema depends on the job named by describe (fact-refresh.schema.json for the fact-refresh job)."}
+  },
+  "allOf": [
+    {"if": {"properties": {"verb": {"const": "describe"}}, "required": ["verb"]}, "then": {"not": {"required": ["input"]}}, "else": {"required": ["input"]}}
+  ],
+  "$defs": {
+    "host": {"type": "string", "pattern": "^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$"},
+    "recorded": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "status": {"type": "integer", "minimum": 100, "maximum": 599},
+        "headers": {"type": "object", "additionalProperties": {"type": "string"}},
+        "body": {"type": "string", "description": "The body as UTF-8 text."},
+        "error": {"type": "string", "minLength": 1, "description": "Instead of a response: the request fails with this network error."}
+      },
+      "oneOf": [{"required": ["status"]}, {"required": ["error"]}]
+    }
+  }
+}

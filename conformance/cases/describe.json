@@ -1,0 +1,307 @@
+{
+ "verb": "describe",
+ "about": "What the plugin says it is, and how it answers requests it must refuse.",
+ "defaults": {
+  "contract": "0",
+  "verb": "describe",
+  "caps": {
+   "timeSeconds": 60,
+   "outputBytes": 1048576
+  }
+ },
+ "cases": [
+  {
+   "name": "describe names contract 0 and the three shardable verbs",
+   "expect": {
+    "data": {
+     "contracts": [
+      "0"
+     ],
+     "job": "fact-refresh",
+     "verbs": {
+      "plan": {
+       "shardable": false
+      },
+      "run-unit": {
+       "shardable": true
+      },
+      "merge": {
+       "shardable": false
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "a contract version the plugin does not speak is exit 3",
+   "invalidRequest": true,
+   "request": {
+    "contract": "99"
+   },
+   "expect": {
+    "exit": 3,
+    "ok": false
+   }
+  },
+  {
+   "name": "stdin that is not JSON is exit 2",
+   "stdin": "not json",
+   "expect": {
+    "exit": 2,
+    "ok": false
+   }
+  },
+  {
+   "name": "an unknown verb is exit 2",
+   "invalidRequest": true,
+   "request": {
+    "verb": "fetch-everything"
+   },
+   "expect": {
+    "exit": 2,
+    "ok": false
+   }
+  },
+  {
+   "name": "a request without caps is exit 2",
+   "stdin": "{\"contract\": \"0\", \"verb\": \"describe\"}",
+   "expect": {
+    "exit": 2,
+    "ok": false
+   }
+  },
+  {
+   "name": "run-unit without network is exit 2",
+   "verb": "run-unit",
+   "request": {
+    "verb": "run-unit",
+    "input": {
+     "id": "host:docs.example.com",
+     "shardKey": "docs.example.com",
+     "pacing": {
+      "minIntervalSeconds": 2.0
+     },
+     "budget": {
+      "requests": 10
+     },
+     "host": {
+      "host": "docs.example.com",
+      "format": "html",
+      "maxBytes": 2000000,
+      "timeoutSeconds": 30
+     },
+     "userAgent": "practice-library-graphs/1 (+https://github.com/practice-library/graphs)",
+     "retryAfterMaxSeconds": 60,
+     "facts": [
+      {
+       "node": "rule.example.a",
+       "source": "https://docs.example.com/a",
+       "measuredAt": "2026-09-01",
+       "quote": {
+        "text": "A."
+       }
+      }
+     ]
+    }
+   },
+   "expect": {
+    "exit": 2,
+    "ok": false
+   }
+  },
+  {
+   "name": "an answer larger than outputBytes is exit 1, not a cut answer",
+   "verb": "plan",
+   "request": {
+    "verb": "plan",
+    "caps": {
+     "timeSeconds": 60,
+     "outputBytes": 1024
+    },
+    "input": {
+     "graph": "vendors/example",
+     "commit": "0e6f5ed237dd52f9fe02a33f8c6b8ec653a3a2c3",
+     "run": {
+      "id": 7,
+      "url": "https://github.com/practice-library/machinery/actions/runs/7"
+     },
+     "now": "2026-10-31T12:00:00Z",
+     "policy": {
+      "userAgent": "practice-library-graphs/1 (+https://github.com/practice-library/graphs)",
+      "maxRequestsPerRun": 50,
+      "retryAfterMaxSeconds": 60,
+      "unreadableRunsBeforeIssue": 3,
+      "hosts": [
+       {
+        "host": "h1.example.com",
+        "vendor": "example",
+        "robots": {
+         "url": "https://h1.example.com/robots.txt",
+         "checkedAt": "2026-10-31T12:00:00Z",
+         "verdict": "allowed"
+        },
+        "terms": {
+         "url": "https://h1.example.com/terms",
+         "checkedAt": "2026-10-31T12:00:00Z",
+         "quote": "Automated reading is permitted."
+        },
+        "format": "html",
+        "maxRequestsPerRun": 5,
+        "minIntervalDays": 7,
+        "maxBytes": 2000000,
+        "timeoutSeconds": 30
+       },
+       {
+        "host": "h2.example.com",
+        "vendor": "example",
+        "robots": {
+         "url": "https://h2.example.com/robots.txt",
+         "checkedAt": "2026-10-31T12:00:00Z",
+         "verdict": "allowed"
+        },
+        "terms": {
+         "url": "https://h2.example.com/terms",
+         "checkedAt": "2026-10-31T12:00:00Z",
+         "quote": "Automated reading is permitted."
+        },
+        "format": "html",
+        "maxRequestsPerRun": 5,
+        "minIntervalDays": 7,
+        "maxBytes": 2000000,
+        "timeoutSeconds": 30
+       },
+       {
+        "host": "h3.example.com",
+        "vendor": "example",
+        "robots": {
+         "url": "https://h3.example.com/robots.txt",
+         "checkedAt": "2026-10-31T12:00:00Z",
+         "verdict": "allowed"
+        },
+        "terms": {
+         "url": "https://h3.example.com/terms",
+         "checkedAt": "2026-10-31T12:00:00Z",
+         "quote": "Automated reading is permitted."
+        },
+        "format": "html",
+        "maxRequestsPerRun": 5,
+        "minIntervalDays": 7,
+        "maxBytes": 2000000,
+        "timeoutSeconds": 30
+       },
+       {
+        "host": "h4.example.com",
+        "vendor": "example",
+        "robots": {
+         "url": "https://h4.example.com/robots.txt",
+         "checkedAt": "2026-10-31T12:00:00Z",
+         "verdict": "allowed"
+        },
+        "terms": {
+         "url": "https://h4.example.com/terms",
+         "checkedAt": "2026-10-31T12:00:00Z",
+         "quote": "Automated reading is permitted."
+        },
+        "format": "html",
+        "maxRequestsPerRun": 5,
+        "minIntervalDays": 7,
+        "maxBytes": 2000000,
+        "timeoutSeconds": 30
+       },
+       {
+        "host": "h5.example.com",
+        "vendor": "example",
+        "robots": {
+         "url": "https://h5.example.com/robots.txt",
+         "checkedAt": "2026-10-31T12:00:00Z",
+         "verdict": "allowed"
+        },
+        "terms": {
+         "url": "https://h5.example.com/terms",
+         "checkedAt": "2026-10-31T12:00:00Z",
+         "quote": "Automated reading is permitted."
+        },
+        "format": "html",
+        "maxRequestsPerRun": 5,
+        "minIntervalDays": 7,
+        "maxBytes": 2000000,
+        "timeoutSeconds": 30
+       }
+      ]
+     },
+     "nodes": [
+      {
+       "id": "rule.example.h1",
+       "type": "rule",
+       "name": "x",
+       "source": "https://h1.example.com/x",
+       "measuredAt": "2026-09-01",
+       "attrs": {
+        "verdict": "allowed",
+        "fetched_at": "2026-09-01T10:00:00Z",
+        "quote": "X."
+       },
+       "edges": []
+      },
+      {
+       "id": "rule.example.h2",
+       "type": "rule",
+       "name": "x",
+       "source": "https://h2.example.com/x",
+       "measuredAt": "2026-09-01",
+       "attrs": {
+        "verdict": "allowed",
+        "fetched_at": "2026-09-01T10:00:00Z",
+        "quote": "X."
+       },
+       "edges": []
+      },
+      {
+       "id": "rule.example.h3",
+       "type": "rule",
+       "name": "x",
+       "source": "https://h3.example.com/x",
+       "measuredAt": "2026-09-01",
+       "attrs": {
+        "verdict": "allowed",
+        "fetched_at": "2026-09-01T10:00:00Z",
+        "quote": "X."
+       },
+       "edges": []
+      },
+      {
+       "id": "rule.example.h4",
+       "type": "rule",
+       "name": "x",
+       "source": "https://h4.example.com/x",
+       "measuredAt": "2026-09-01",
+       "attrs": {
+        "verdict": "allowed",
+        "fetched_at": "2026-09-01T10:00:00Z",
+        "quote": "X."
+       },
+       "edges": []
+      },
+      {
+       "id": "rule.example.h5",
+       "type": "rule",
+       "name": "x",
+       "source": "https://h5.example.com/x",
+       "measuredAt": "2026-09-01",
+       "attrs": {
+        "verdict": "allowed",
+        "fetched_at": "2026-09-01T10:00:00Z",
+        "quote": "X."
+       },
+       "edges": []
+      }
+     ]
+    }
+   },
+   "expect": {
+    "exit": 1,
+    "ok": false
+   }
+  }
+ ]
+}

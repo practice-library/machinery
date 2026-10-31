@@ -1,0 +1,590 @@
+{
+ "verb": "run-unit",
+ "about": "The design review measured, on 81 stored quotes over 40 pages read once each: an extractor that replaces every tag with a space misses 12 quotes that are on their pages (false quote-gone); a careful one misses 2, both markdown table rows that never appear in page text. Each case is the smallest element around one of those 12 quotes, with the stored quote and the outcome a conforming plugin must give: unchanged.",
+ "attribution": "Each page snippet is from GitHub Docs (https://docs.github.com) by GitHub, licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/); source repository github/docs. Markup is trimmed to the element around the quote, attributes removed; the text is unchanged. The quotes are those stored in practice-library/graphs vendors/github.",
+ "defaults": {
+  "contract": "0",
+  "verb": "run-unit",
+  "caps": {
+   "timeSeconds": 60,
+   "outputBytes": 1048576
+  },
+  "network": {
+   "replay": {
+    "start": "2026-10-31T12:00:00Z",
+    "exchanges": {
+     "https://docs.github.com/robots.txt": [
+      {
+       "status": 200,
+       "headers": {
+        "content-type": "text/plain"
+       },
+       "body": "User-agent: *\n"
+      }
+     ]
+    }
+   }
+  },
+  "input": {
+   "id": "host:docs.github.com",
+   "shardKey": "docs.github.com",
+   "pacing": {
+    "minIntervalSeconds": 2.0
+   },
+   "budget": {
+    "requests": 10
+   },
+   "host": {
+    "host": "docs.github.com",
+    "format": "html",
+    "maxBytes": 2000000,
+    "timeoutSeconds": 30
+   },
+   "userAgent": "practice-library-graphs/1 (+https://github.com/practice-library/graphs)",
+   "retryAfterMaxSeconds": 60,
+   "facts": []
+  }
+ },
+ "cases": [
+  {
+   "name": "design review: feature.github.actions.public-runner-hardware-ubuntu",
+   "why": "an inline element closes right before punctuation; a naive extractor puts a space there",
+   "request": {
+    "network": {
+     "replay": {
+      "exchanges": {
+       "https://docs.github.com/en/actions/reference/runners/github-hosted-runners": [
+        {
+         "status": 200,
+         "headers": {
+          "content-type": "text/html; charset=utf-8"
+         },
+         "body": "<!doctype html><html><body><main><table><tr><td>Linux</td><td>4</td><td>16 GB</td><td>14 GB</td><td> x64 </td><td> <code><a>ubuntu-latest</a></code>, <code><a>ubuntu-24.04</a></code>, <code><a>ubuntu-22.04</a></code>, <code><a>ubuntu-26.04</a></code> </td></tr></table></main></body></html>"
+        }
+       ]
+      }
+     }
+    },
+    "input": {
+     "facts": [
+      {
+       "node": "feature.github.actions.public-runner-hardware-ubuntu",
+       "source": "https://docs.github.com/en/actions/reference/runners/github-hosted-runners",
+       "measuredAt": "2026-10-31",
+       "quote": {
+        "text": "Linux 4 16 GB 14 GB x64 ubuntu-latest, ubuntu-24.04, ubuntu-22.04, ubuntu-26.04"
+       }
+      }
+     ]
+    }
+   },
+   "expect": {
+    "data": {
+     "requests": 2,
+     "results": [
+      {
+       "node": "feature.github.actions.public-runner-hardware-ubuntu",
+       "outcome": "unchanged"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "design review: feature.github.actions.public-runner-memory-ubuntu",
+   "why": "an inline element closes right before punctuation; a naive extractor puts a space there",
+   "request": {
+    "network": {
+     "replay": {
+      "exchanges": {
+       "https://docs.github.com/en/actions/reference/runners/github-hosted-runners": [
+        {
+         "status": 200,
+         "headers": {
+          "content-type": "text/html; charset=utf-8"
+         },
+         "body": "<!doctype html><html><body><main><table><tr><td>Linux</td><td>4</td><td>16 GB</td><td>14 GB</td><td> x64 </td><td> <code><a>ubuntu-latest</a></code>, <code><a>ubuntu-24.04</a></code>, <code><a>ubuntu-22.04</a></code>, <code><a>ubuntu-26.04</a></code> </td></tr></table></main></body></html>"
+        }
+       ]
+      }
+     }
+    },
+    "input": {
+     "facts": [
+      {
+       "node": "feature.github.actions.public-runner-memory-ubuntu",
+       "source": "https://docs.github.com/en/actions/reference/runners/github-hosted-runners",
+       "measuredAt": "2026-10-31",
+       "quote": {
+        "text": "Linux 4 16 GB 14 GB x64 ubuntu-latest, ubuntu-24.04, ubuntu-22.04, ubuntu-26.04"
+       }
+      }
+     ]
+    }
+   },
+   "expect": {
+    "data": {
+     "requests": 2,
+     "results": [
+      {
+       "node": "feature.github.actions.public-runner-memory-ubuntu",
+       "outcome": "unchanged"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "design review: feature.github.security.secret-scanning-public",
+   "why": "an inline element closes right before punctuation; a naive extractor puts a space there",
+   "request": {
+    "network": {
+     "replay": {
+      "exchanges": {
+       "https://docs.github.com/en/code-security/concepts/secret-security/secret-scanning": [
+        {
+         "status": 200,
+         "headers": {
+          "content-type": "text/html; charset=utf-8"
+         },
+         "body": "<!doctype html><html><body><main><li><strong>Public repositories</strong>: Secret scanning runs automatically for free.</li></main></body></html>"
+        }
+       ]
+      }
+     }
+    },
+    "input": {
+     "facts": [
+      {
+       "node": "feature.github.security.secret-scanning-public",
+       "source": "https://docs.github.com/en/code-security/concepts/secret-security/secret-scanning",
+       "measuredAt": "2026-10-31",
+       "quote": {
+        "text": "Public repositories: Secret scanning runs automatically for free."
+       }
+      }
+     ]
+    }
+   },
+   "expect": {
+    "data": {
+     "requests": 2,
+     "results": [
+      {
+       "node": "feature.github.security.secret-scanning-public",
+       "outcome": "unchanged"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "design review: limit.github.actions.concurrent-jobs-free",
+   "why": "a markdown table row never appears in page text; matched as a cell sequence",
+   "request": {
+    "network": {
+     "replay": {
+      "exchanges": {
+       "https://docs.github.com/en/actions/reference/limits": [
+        {
+         "status": 200,
+         "headers": {
+          "content-type": "text/html; charset=utf-8"
+         },
+         "body": "<!doctype html><html><body><main><table><tr><td>Standard GitHub-hosted runner</td><td>Free</td><td>20</td><td>5</td><td>Not applicable</td></tr></table></main></body></html>"
+        }
+       ]
+      }
+     }
+    },
+    "input": {
+     "facts": [
+      {
+       "node": "limit.github.actions.concurrent-jobs-free",
+       "source": "https://docs.github.com/en/actions/reference/limits",
+       "measuredAt": "2026-10-31",
+       "quote": {
+        "cells": [
+         "Standard GitHub-hosted runner",
+         "Free",
+         "20",
+         "5",
+         "Not applicable"
+        ]
+       }
+      }
+     ]
+    }
+   },
+   "expect": {
+    "data": {
+     "requests": 2,
+     "results": [
+      {
+       "node": "limit.github.actions.concurrent-jobs-free",
+       "outcome": "unchanged"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "design review: permission.github.github-token.fork-read-only",
+   "why": "an inline element closes right before punctuation; a naive extractor puts a space there",
+   "request": {
+    "network": {
+     "replay": {
+      "exchanges": {
+       "https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows": [
+        {
+         "status": 200,
+         "headers": {
+          "content-type": "text/html; charset=utf-8"
+         },
+         "body": "<!doctype html><html><body><main><p>With the exception of <code>GITHUB_TOKEN</code>, secrets are not passed to the runner when a workflow is triggered from a forked repository. The <code>GITHUB_TOKEN</code> has read-only permissions in pull requests from forked repositories. For more information, see <a>Use GITHUB_TOKEN for authentication in workflows</a>.</p></main></body></html>"
+        }
+       ]
+      }
+     }
+    },
+    "input": {
+     "facts": [
+      {
+       "node": "permission.github.github-token.fork-read-only",
+       "source": "https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows",
+       "measuredAt": "2026-10-31",
+       "quote": {
+        "text": "With the exception of GITHUB_TOKEN, secrets are not passed to the runner when a workflow is triggered from a forked repository. The GITHUB_TOKEN has read-only permissions in pull requests from forked repositories."
+       }
+      }
+     ]
+    }
+   },
+   "expect": {
+    "data": {
+     "requests": 2,
+     "results": [
+      {
+       "node": "permission.github.github-token.fork-read-only",
+       "outcome": "unchanged"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "design review: plan.github.actions.free-included-compute",
+   "why": "a markdown table row never appears in page text; matched as a cell sequence",
+   "request": {
+    "network": {
+     "replay": {
+      "exchanges": {
+       "https://docs.github.com/en/billing/concepts/product-billing/github-actions": [
+        {
+         "status": 200,
+         "headers": {
+          "content-type": "text/html; charset=utf-8"
+         },
+         "body": "<!doctype html><html><body><main><table><tr><td>GitHub Free</td><td>500 MB</td><td>$12 USD</td><td>10 GB</td><td>Not applicable</td></tr></table></main></body></html>"
+        }
+       ]
+      }
+     }
+    },
+    "input": {
+     "facts": [
+      {
+       "node": "plan.github.actions.free-included-compute",
+       "source": "https://docs.github.com/en/billing/concepts/product-billing/github-actions",
+       "measuredAt": "2026-10-31",
+       "quote": {
+        "cells": [
+         "GitHub Free",
+         "500 MB",
+         "$12 USD",
+         "10 GB",
+         "Not applicable"
+        ]
+       }
+      }
+     ]
+    }
+   },
+   "expect": {
+    "data": {
+     "requests": 2,
+     "results": [
+      {
+       "node": "plan.github.actions.free-included-compute",
+       "outcome": "unchanged"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "design review: rate-limit.github.graphql.github-token",
+   "why": "an inline element closes right before punctuation; a naive extractor puts a space there",
+   "request": {
+    "network": {
+     "replay": {
+      "exchanges": {
+       "https://docs.github.com/en/graphql/overview/rate-limits-and-query-limits-for-the-graphql-api": [
+        {
+         "status": 200,
+         "headers": {
+          "content-type": "text/html; charset=utf-8"
+         },
+         "body": "<!doctype html><html><body><main><li><em>For <code>GITHUB_TOKEN</code> in GitHub Actions workflows</em>: 1,000 points per hour per repository. For requests to resources that belong to an enterprise account on GitHub.com, the limit is 15,000 points per hour per repository.</li></main></body></html>"
+        }
+       ]
+      }
+     }
+    },
+    "input": {
+     "facts": [
+      {
+       "node": "rate-limit.github.graphql.github-token",
+       "source": "https://docs.github.com/en/graphql/overview/rate-limits-and-query-limits-for-the-graphql-api",
+       "measuredAt": "2026-10-31",
+       "quote": {
+        "text": "For GITHUB_TOKEN in GitHub Actions workflows: 1,000 points per hour per repository."
+       }
+      }
+     ]
+    }
+   },
+   "expect": {
+    "data": {
+     "requests": 2,
+     "results": [
+      {
+       "node": "rate-limit.github.graphql.github-token",
+       "outcome": "unchanged"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "design review: rate-limit.github.graphql.user",
+   "why": "an inline element closes right before punctuation; a naive extractor puts a space there",
+   "request": {
+    "network": {
+     "replay": {
+      "exchanges": {
+       "https://docs.github.com/en/graphql/overview/rate-limits-and-query-limits-for-the-graphql-api": [
+        {
+         "status": 200,
+         "headers": {
+          "content-type": "text/html; charset=utf-8"
+         },
+         "body": "<!doctype html><html><body><main><li><em>For users</em>: 5,000 points per hour per user. This includes requests made with a personal access token as well as requests made by a GitHub App or OAuth app on behalf of a user that authorized the app. Requests made on a user&#x27;s behalf by a GitHub App that is owned by a GitHub Enterprise Cloud organization have a higher rate limit of 10,000 points per hour. Similarly, requests made on your behalf by an OAuth app that is owned or approved by a GitHub Enterprise Cloud organization have a higher rate limit of 10,000 points per hour if you are a member of the GitHub Enterprise Cloud organization.</li></main></body></html>"
+        }
+       ]
+      }
+     }
+    },
+    "input": {
+     "facts": [
+      {
+       "node": "rate-limit.github.graphql.user",
+       "source": "https://docs.github.com/en/graphql/overview/rate-limits-and-query-limits-for-the-graphql-api",
+       "measuredAt": "2026-10-31",
+       "quote": {
+        "text": "For users: 5,000 points per hour per user."
+       }
+      }
+     ]
+    }
+   },
+   "expect": {
+    "data": {
+     "requests": 2,
+     "results": [
+      {
+       "node": "rate-limit.github.graphql.user",
+       "outcome": "unchanged"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "design review: rule.github.api.exceeding-primary",
+   "why": "an inline element closes right before punctuation; a naive extractor puts a space there",
+   "request": {
+    "network": {
+     "replay": {
+      "exchanges": {
+       "https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api": [
+        {
+         "status": 200,
+         "headers": {
+          "content-type": "text/html; charset=utf-8"
+         },
+         "body": "<!doctype html><html><body><main><p>If you exceed your primary rate limit, you will receive a <code>403</code> or <code>429</code> response, and the <code>x-ratelimit-remaining</code> header will be <code>0</code>. You should not retry your request until after the time specified by the <code>x-ratelimit-reset</code> header.</p></main></body></html>"
+        }
+       ]
+      }
+     }
+    },
+    "input": {
+     "facts": [
+      {
+       "node": "rule.github.api.exceeding-primary",
+       "source": "https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api",
+       "measuredAt": "2026-10-31",
+       "quote": {
+        "text": "If you exceed your primary rate limit, you will receive a 403 or 429 response, and the x-ratelimit-remaining header will be 0."
+       }
+      }
+     ]
+    }
+   },
+   "expect": {
+    "data": {
+     "requests": 2,
+     "results": [
+      {
+       "node": "rule.github.api.exceeding-primary",
+       "outcome": "unchanged"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "design review: rule.github.community-health-files.github-repo-public",
+   "why": "an inline element closes right before punctuation; a naive extractor puts a space there",
+   "request": {
+    "network": {
+     "replay": {
+      "exchanges": {
+       "https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/creating-a-default-community-health-file": [
+        {
+         "status": 200,
+         "headers": {
+          "content-type": "text/html; charset=utf-8"
+         },
+         "body": "<!doctype html><html><body><main><p>You can add default community health files to a repository called <code>.github</code>. The <code>.github</code> repository must be <strong>public</strong>.</p></main></body></html>"
+        }
+       ]
+      }
+     }
+    },
+    "input": {
+     "facts": [
+      {
+       "node": "rule.github.community-health-files.github-repo-public",
+       "source": "https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/creating-a-default-community-health-file",
+       "measuredAt": "2026-10-31",
+       "quote": {
+        "text": "You can add default community health files to a repository called .github. The .github repository must be public."
+       }
+      }
+     ]
+    }
+   },
+   "expect": {
+    "data": {
+     "requests": 2,
+     "results": [
+      {
+       "node": "rule.github.community-health-files.github-repo-public",
+       "outcome": "unchanged"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "design review: rule.github.github-token.pull-request-target-no-untrusted-code",
+   "why": "an inline element closes right before punctuation; a naive extractor puts a space there",
+   "request": {
+    "network": {
+     "replay": {
+      "exchanges": {
+       "https://docs.github.com/en/actions/reference/security/securely-using-pull_request_target": [
+        {
+         "status": 200,
+         "headers": {
+          "content-type": "text/html; charset=utf-8"
+         },
+         "body": "<!doctype html><html><body><main><p> Only allow <code>pull_request_target</code> when it is necessary. Workflows triggered by this event should not check out, build, or run code from an untrusted pull request with access to repository secrets or a privileged <code>GITHUB_TOKEN</code>.</p></main></body></html>"
+        }
+       ]
+      }
+     }
+    },
+    "input": {
+     "facts": [
+      {
+       "node": "rule.github.github-token.pull-request-target-no-untrusted-code",
+       "source": "https://docs.github.com/en/actions/reference/security/securely-using-pull_request_target",
+       "measuredAt": "2026-10-31",
+       "quote": {
+        "text": "Workflows triggered by this event should not check out, build, or run code from an untrusted pull request with access to repository secrets or a privileged GITHUB_TOKEN."
+       }
+      }
+     ]
+    }
+   },
+   "expect": {
+    "data": {
+     "requests": 2,
+     "results": [
+      {
+       "node": "rule.github.github-token.pull-request-target-no-untrusted-code",
+       "outcome": "unchanged"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "design review: rule.github.github-token.unspecified-become-none",
+   "why": "an inline element closes right before punctuation; a naive extractor puts a space there",
+   "request": {
+    "network": {
+     "replay": {
+      "exchanges": {
+       "https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax": [
+        {
+         "status": 200,
+         "headers": {
+          "content-type": "text/html; charset=utf-8"
+         },
+         "body": "<!doctype html><html><body><main><p>If you specify the access for any of these permissions, all of those that are not specified are set to <code>none</code>.</p></main></body></html>"
+        }
+       ]
+      }
+     }
+    },
+    "input": {
+     "facts": [
+      {
+       "node": "rule.github.github-token.unspecified-become-none",
+       "source": "https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax",
+       "measuredAt": "2026-10-31",
+       "quote": {
+        "text": "If you specify the access for any of these permissions, all of those that are not specified are set to none."
+       }
+      }
+     ]
+    }
+   },
+   "expect": {
+    "data": {
+     "requests": 2,
+     "results": [
+      {
+       "node": "rule.github.github-token.unspecified-become-none",
+       "outcome": "unchanged"
+      }
+     ]
+    }
+   }
+  }
+ ]
+}

@@ -1,0 +1,10 @@
+#!/usr/bin/env python3
+"""The fact-refresh job as a contract v0 plugin: one JSON request on stdin, one JSON envelope on stdout."""
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+
+from factrefresh.plugin import main  # noqa: E402
+
+sys.exit(main())

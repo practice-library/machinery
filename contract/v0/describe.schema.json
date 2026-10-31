@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/practice-library/machinery/contract/v0/describe.schema.json",
+  "title": "describe data, contract v0",
+  "description": "What a plugin is and what it can do. A gateway reads it before sending any other verb.",
+  "type": "object",
+  "required": ["name", "version", "contracts", "job", "verbs"],
+  "additionalProperties": false,
+  "properties": {
+    "name": {"type": "string", "pattern": "^[a-z][a-z0-9-]*$"},
+    "version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+    "contracts": {
+      "type": "array",
+      "description": "Contract versions the plugin speaks.",
+      "minItems": 1,
+      "items": {"type": "string", "pattern": "^[0-9]+$"}
+    },
+    "job": {"type": "string", "pattern": "^[a-z][a-z0-9-]*$", "description": "The job the plugin performs, which names the schema of its verbs' inputs and outputs (for example fact-refresh)."},
+    "verbs": {
+      "type": "object",
+      "description": "Every verb the plugin answers besides describe. A shardable job answers plan, run-unit and merge; a job that is not shardable answers run.",
+      "additionalProperties": false,
+      "properties": {
+        "plan": {"$ref": "#/$defs/verb"},
+        "run-unit": {"$ref": "#/$defs/verb"},
+        "merge": {"$ref": "#/$defs/verb"},
+        "run": {"$ref": "#/$defs/verb"}
+      },
+      "anyOf": [
+        {"required": ["plan", "run-unit", "merge"]},
+        {"required": ["run"]}
+      ]
+    }
+  },
+  "$defs": {
+    "verb": {
+      "type": "object",
+      "required": ["shardable"],
+      "additionalProperties": false,
+      "properties": {
+        "shardable": {"type": "boolean", "description": "Whether a gateway may run several calls of this verb in parallel, one per work unit."}
+      }
+    }
+  }
+}
