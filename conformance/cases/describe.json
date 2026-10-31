@@ -403,6 +403,14 @@
     "exit": 2,
     "ok": false
    }
+  },
+  {
+   "name": "a lone surrogate escaped in a string is exit 2, with an envelope",
+   "stdin": "{\"contract\": \"0\", \"verb\": \"\\ud800\", \"caps\": {\"timeSeconds\": 60, \"outputBytes\": 1048576}}",
+   "expect": {
+    "exit": 2,
+    "ok": false
+   }
   }
  ]
 }

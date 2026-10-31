@@ -22,13 +22,13 @@ These invariants hold for every answer:
 - **describe:** it answers in the contract version it was asked in, and names each verb once.
 - **plan:** the budgets add up to at most `maxRequestsPerRun`, and `maxParallel` is at most 3.
 - **run-unit:** requests are at most the unit's budget. Unless the unit aborted, `results` and `notReached` name each fact of the unit exactly once.
-- **merge:** every fact of a unit without a partial result is in the report. A fact of a unit with one is in the report unless the partial says it was not reached, and then it is not. No fact is `unchanged` unless its partial result says so.
+- **merge:** every fact of a unit without a partial result is in the report, as `unreadable`. A fact of a unit with one is in the report unless the partial says it was not reached, and then it is not. No fact is `unchanged` unless its partial result says so.
 
 What the runner cannot check: that a plugin reads no files, environment or secrets, and opens no connection beyond what the request lists. Those are properties of where the plugin runs, not of its answers. The caller's CI job keeps them by giving the plugin nothing else; a conformance pass does not prove them.
 
 The runner's own checks are tested against plugins that break them one way each (`tests/fixtures/plugins/bad.py`, `tests/test_runner.py`), and each check is mutated in `tests/guards.py`.
 
-The runner exits 0 only when every case passes. The Python plugin of this repository (`bin/fact-refresh-plugin`) passes all 59 cases in CI. A plugin that extracts text by replacing every tag with a space (`tests/fixtures/plugins/naive.py`) fails 13: the 12 design-review cases and the table-row case.
+The runner exits 0 only when every case passes. The Python plugin of this repository (`bin/fact-refresh-plugin`) passes all 61 cases in CI. A plugin that extracts text by replacing every tag with a space (`tests/fixtures/plugins/naive.py`) fails 13: the 12 design-review cases and the table-row case.
 
 ## Cases
 
@@ -36,7 +36,7 @@ One file per group. Each file has a `verb`, `defaults` (a request that each case
 
 - `describe.json`: describe, and the process boundary:
   - a contract version the plugin does not speak (exit 3), or one that is not digits;
-  - stdin that is not JSON, a key given twice, NaN;
+  - stdin that is not JSON, a key given twice, NaN, a lone surrogate escaped in a string;
   - an unknown verb, an unknown top-level key, describe with an input, run-unit without network;
   - no caps, `timeSeconds` true or negative, `outputBytes` below 1024 (the refusal still fits in it);
   - an answer over `outputBytes`.
@@ -60,7 +60,7 @@ One file per group. Each file has a `verb`, `defaults` (a request that each case
   - complete, one partial missing, none at all, an aborted unit;
   - the same report whatever the order of the partials, including two aborted units in both orders;
   - a fact not reached left out of the report, and a partial that leaves a fact out refused;
-  - duplicate and unknown partials refused, and partials with a fact outside their unit or in no unit, another shard key, or another host's robots.txt.
+  - duplicate and unknown partials refused, and partials with a fact outside their unit or in no unit, another shard key, another host's robots.txt, or results without having read robots.txt.
 
 ## The design-review cases
 
@@ -79,6 +79,6 @@ Of the 12 quotes the first extractor misses:
 - **10** sit next to an inline element that closes right before punctuation (`<code>GITHUB_TOKEN</code>,`, `<strong>public</strong>.`, `<em>For users</em>:`). A space inserted there breaks the quote.
 - **2** are markdown table rows (`| a | b |`), which never appear in a page's text. These are the 2 the careful extractor also misses.
 
-Each case is the smallest `<p>`, `<li>` or `<tr>` around one of these quotes, with its stored quote; a conforming plugin must report `unchanged`. The table quotes are stored as cell sequences. The generator checked each snippet: the careful extractor finds the quote in it, and the first one does not.
+Each case is the smallest `<p>`, `<li>` or `<tr>` around one of these quotes, with its stored quote; a conforming plugin must report `unchanged`. The table quotes are stored as cell sequences. The generator checked each snippet. For the 10 text quotes, the careful extractor finds the quote in it and the first one does not. For the 2 table rows, neither finds the stored row in the text; the cells are found in one row of the snippet's table.
 
 The page snippets are from GitHub Docs (https://docs.github.com) by GitHub, licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/); the source repository is github/docs. Markup is trimmed to the element around the quote and attributes are removed; the text is unchanged.

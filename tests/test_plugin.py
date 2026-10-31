@@ -65,6 +65,14 @@ class Plan(unittest.TestCase):
     def test_a_host_left_with_1_request_waits_with_2_it_runs(self):
         self.assertEqual(self.budgets(4, [2, 2])[0], [4])  # 1 left: robots.txt alone is no use; it goes back to the first
         self.assertEqual(self.budgets(5, [2, 2])[0], [3, 2])  # 2 left: robots.txt and one page
+        self.assertEqual(self.budgets(6, [2, 2])[0], [3, 3])  # 3 left: robots.txt and both pages
+
+    def test_a_fact_is_due_after_min_interval_days(self):
+        # minIntervalDays is 7 and the run starts on 2026-10-31
+        req = plan_request(50, [("docs.example.com", 20, [(f"rule.example.d{d}", f"https://docs.example.com/{d}", f"2026-10-{31 - d}")
+                                                           for d in (6, 7, 8)])])
+        _, env = call(req)
+        self.assertEqual([f["node"] for f in env["data"]["units"][0]["facts"]], ["rule.example.d8", "rule.example.d7"])
 
     def test_budgets_never_exceed_the_run_cap(self):
         for cap in (2, 3, 4, 5, 6, 7):
@@ -257,6 +265,16 @@ class Merge(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertIn("has robots.txt of help.example.com", env["warnings"][0])
 
+    def test_a_partial_with_results_that_never_read_robots_is_refused(self):
+        def no_robots(inp):
+            inp["partials"][0]["robots"] = None
+        code, env = self.merge(self.COMPLETE, no_robots)
+        self.assertEqual(code, 1)
+        self.assertIn("never read robots.txt", env["warnings"][0])
+        def nothing_read(inp):
+            inp["partials"][0].update(robots=None, results=[], requests=0, notReached=["rule.example.a"])
+        self.assertEqual(self.merge(self.COMPLETE, nothing_read)[0], 0)
+
     def test_two_results_for_one_fact_are_refused(self):
         def edit(inp):
             inp["plan"]["decided"].append(dict(inp["plan"]["decided"][0], node="rule.example.a"))
@@ -271,6 +289,24 @@ class Boundary(unittest.TestCase):
         self.assertEqual(call({"contract": "0", "verb": "plan", "caps": CAPS})[0], 2)
         self.assertEqual(call({"contract": "0", "verb": "plan", "caps": CAPS, "input": {}})[0], 2)
         self.assertEqual(call({"contract": "0", "verb": "run", "caps": CAPS, "input": {}})[0], 2)
+        code, out = raw(json.dumps({"contract": "0", "verb": "run-unit", "caps": CAPS, "input": {"host": {"host": "a.example.com"}}}).encode())
+        self.assertEqual(code, 2)
+        self.assertIn("run-unit needs network", json.loads(out)["warnings"][0])
+        code, out = raw(json.dumps({"contract": "0", "verb": "plan", "caps": CAPS, "input": {}}).encode())
+        self.assertIn("the plan input does not match the contract: KeyError", json.loads(out)["warnings"][0])
+
+    def test_a_lone_surrogate_is_a_bad_request_with_an_envelope(self):
+        base = '{"contract": "0", "verb": "describe", "caps": {"timeSeconds": 60, "outputBytes": 1048576}'
+        for stdin in (base.replace('"describe"', '"\\ud800"') + "}", base + ', "\\udfff": 1}', base + ', "x\\ud800": 1}'):
+            code, out = raw(stdin.encode())
+            self.assertEqual(code, 2, stdin)
+            self.assertIn("lone surrogate", json.loads(out)["warnings"][0])
+        self.assertEqual(raw((base + ', "network": {"hosts": ["\\u0061.example.com"]}}').encode())[0], 0)  # an escape that is UTF-8
+
+    def test_an_answer_that_cannot_be_utf8_is_still_written(self):
+        code, out = plugin.fit(1, plugin.failure("bad \ud800 text"), None)
+        self.assertEqual(code, 1)
+        self.assertEqual(json.loads(out)["warnings"], ["bad \ud800 text"])
 
     def test_output_cap_at_the_byte(self):
         req = plan_request(50, [(f"h{i}.example.com", 20, [(f"rule.example.h{i}", f"https://h{i}.example.com/x", "2026-09-01")])
@@ -378,6 +414,7 @@ class Cells(unittest.TestCase):
         self.assertEqual(markdown_row("| a | b |"), ["a", "b"])
         self.assertEqual(markdown_row("| a \\| b | c |"), ["a | b", "c"])
         self.assertIsNone(markdown_row("a | b"))
+        self.assertIsNone(markdown_row("| a | b | tail"))  # a row starts and ends with a pipe
         self.assertIsNone(markdown_row("|"))
         self.assertEqual(quote_form("plain | text"), {"text": "plain | text"})
 

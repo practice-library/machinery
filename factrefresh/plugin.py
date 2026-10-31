@@ -197,6 +197,8 @@ def merge(inp: dict) -> Tuple[dict, list]:
             raise Refused(FAILED, f"the partial result for {uid} has shard key {part['shardKey'][:120]}, not {unit['shardKey']}")
         if part["robots"] is not None and part["robots"]["host"] != unit["host"]["host"]:
             raise Refused(FAILED, f"the partial result for {uid} has robots.txt of {part['robots']['host'][:120]}")
+        if part["robots"] is None and part["results"]:
+            raise Refused(FAILED, f"the partial result for {uid} has results but never read robots.txt")
         allowed = {f["node"] for f in unit["facts"]}
         said = [r["node"] for r in part["results"]] + list(part["notReached"])
         stray = [n for n in said if n not in allowed]
@@ -344,9 +346,14 @@ def parse(raw) -> object:
     read is a bad request (exit 2), never this plugin's failure."""
     try:
         text = raw.decode("utf-8") if isinstance(raw, bytes) else raw
-        return json.loads(text, object_pairs_hook=_no_duplicate_keys, parse_constant=_no_constant)
+        request = json.loads(text, object_pairs_hook=_no_duplicate_keys, parse_constant=_no_constant)
+        # an escape such as \ud800 decodes to a lone surrogate, which no answer could carry as UTF-8
+        json.dumps(request, ensure_ascii=False).encode("utf-8")
+        return request
     except RecursionError:
         raise bad("the request is nested too deeply")
+    except UnicodeEncodeError:
+        raise bad("the request is not JSON that can be UTF-8: a string holds a lone surrogate (\\ud800 to \\udfff)")
     except ValueError as err:  # not UTF-8, JSONDecodeError, NaN, a duplicate key, an integer too long to convert
         raise bad(f"the request is not JSON: {str(err)[:200]}")
 
@@ -358,10 +365,19 @@ def output_cap(request) -> Optional[int]:
     return None
 
 
+def dump(envelope: dict) -> bytes:
+    """The envelope as one UTF-8 line. Text that cannot be UTF-8 (a lone surrogate) is written as a JSON
+    escape instead, so an answer is always written."""
+    try:
+        return (json.dumps(envelope, ensure_ascii=False, separators=(",", ":")) + "\n").encode("utf-8")
+    except UnicodeEncodeError:
+        return (json.dumps(envelope, ensure_ascii=True, separators=(",", ":")) + "\n").encode("utf-8")
+
+
 def fit(code: int, envelope: dict, cap: Optional[int]) -> Tuple[int, bytes]:
     """The answer as written, newline included, within cap. A success that does not fit becomes a failure; a
     failure's warning is shortened until it fits; below the smallest failure envelope nothing is written."""
-    out = (json.dumps(envelope, ensure_ascii=False, separators=(",", ":")) + "\n").encode("utf-8")
+    out = dump(envelope)
     if cap is None or len(out) <= cap:
         return code, out
     if envelope["ok"]:
@@ -371,7 +387,7 @@ def fit(code: int, envelope: dict, cap: Optional[int]) -> Tuple[int, bytes]:
     best = b""
     while lo <= hi:
         mid = (lo + hi) // 2
-        out = (json.dumps(failure(message[:mid]), ensure_ascii=False, separators=(",", ":")) + "\n").encode("utf-8")
+        out = dump(failure(message[:mid]))
         if len(out) <= cap:
             best, lo = out, mid + 1
         else:

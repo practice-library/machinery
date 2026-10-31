@@ -1191,6 +1191,61 @@
     "exit": 1,
     "ok": false
    }
+  },
+  {
+   "name": "a partial with results that never read robots.txt is refused",
+   "request": {
+    "input": {
+     "partials": [
+      {
+       "unit": "host:docs.example.com",
+       "shardKey": "docs.example.com",
+       "requests": 2,
+       "robots": null,
+       "results": [
+        {
+         "node": "rule.example.a",
+         "source": "https://docs.example.com/a",
+         "fetchedAt": "2026-10-31T12:00:03Z",
+         "outcome": "unchanged",
+         "finalUrl": "https://docs.example.com/a",
+         "httpStatus": 200,
+         "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+       ],
+       "notReached": []
+      },
+      {
+       "unit": "host:help.example.com",
+       "shardKey": "help.example.com",
+       "requests": 2,
+       "robots": {
+        "host": "help.example.com",
+        "fetchedAt": "2026-10-31T12:00:01Z",
+        "httpStatus": 200,
+        "verdict": "allowed"
+       },
+       "results": [
+        {
+         "node": "rule.example.b",
+         "source": "https://help.example.com/b",
+         "fetchedAt": "2026-10-31T12:00:05Z",
+         "outcome": "changed",
+         "finalUrl": "https://help.example.com/b",
+         "httpStatus": 200,
+         "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+         "reason": "quote-gone: the page was read and the quote is not in its text"
+        }
+       ],
+       "notReached": []
+      }
+     ]
+    }
+   },
+   "expect": {
+    "exit": 1,
+    "ok": false
+   }
   }
  ]
 }

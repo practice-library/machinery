@@ -18,7 +18,8 @@ What it checks of every answer, as a black box:
   run-unit requests are at most the unit's budget; results and notReached name each fact of the unit
            exactly once, unless the unit aborted;
   merge    every fact of the plan is in the report unless a partial says it was not reached or the
-           report is aborted; no fact is unchanged without a partial result that says so;
+           report is aborted; a fact of a unit without a partial is unreadable; no fact is unchanged
+           without a partial result that says so;
   describe it answers in the contract version it was asked in, and names each verb once.
 What it cannot check: that the plugin reads no files, environment or secrets, and opens no connection.
 Those are properties of where it runs (the caller's CI job), not of its answers.
@@ -146,6 +147,8 @@ def invariants(verb, request, data):
                 done = any(p["unit"] == u["id"] for p in inp["partials"])
                 if not done and f["node"] not in reported:
                     return f"merge: {f['node']} of the missing unit {u['id']} is not in the report"
+                if not done and reported[f["node"]]["outcome"] != "unreadable":
+                    return f"merge: {f['node']} of the missing unit {u['id']} is {reported[f['node']]['outcome']}, not unreadable"
                 if done and f["node"] not in reported and f["node"] not in waiting:
                     return f"merge: {f['node']} is neither in the report nor not reached"
                 r = reported.get(f["node"])

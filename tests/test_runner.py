@@ -84,6 +84,44 @@ class Runner(unittest.TestCase):
 class Invariants(unittest.TestCase):
     UNIT = {"budget": {"requests": 3}, "facts": [{"node": "rule.example.a"}, {"node": "rule.example.b"}]}
 
+    def test_plan_budgets_add_up_to_at_most_the_run_cap(self):
+        request = {"input": {"policy": {"maxRequestsPerRun": 6}}}
+        plan = lambda *budgets: {"maxParallel": 2, "units": [{"budget": {"requests": b}} for b in budgets]}
+        self.assertIsNone(invariants("plan", request, plan(3, 2)))  # 5
+        self.assertIsNone(invariants("plan", request, plan(3, 3)))  # 6
+        self.assertIn("more than maxRequestsPerRun", invariants("plan", request, plan(3, 4)))  # 7
+
+    def test_plan_max_parallel_at_most_3(self):
+        request = {"input": {"policy": {"maxRequestsPerRun": 50}}}
+        self.assertIsNone(invariants("plan", request, {"maxParallel": 3, "units": []}))
+        self.assertIn("maxParallel above 3", invariants("plan", request, {"maxParallel": 4, "units": []}))
+
+    def test_run_unit_requests_at_most_its_budget(self):
+        part = {"results": [{"node": "rule.example.a"}], "notReached": ["rule.example.b"]}
+        self.assertIsNone(invariants("run-unit", {"input": self.UNIT}, dict(part, requests=3)))
+        self.assertIn("4 requests, budget 3", invariants("run-unit", {"input": self.UNIT}, dict(part, requests=4)))
+
+    def missing_unit(self, results):
+        unit = dict(self.UNIT, id="host:a.example.com")
+        return invariants("merge", {"input": {"plan": {"units": [unit]}, "partials": []}}, {"results": results})
+
+    def test_merge_reports_a_missing_units_facts_as_unreadable(self):
+        a, b = {"node": "rule.example.a", "outcome": "unreadable"}, {"node": "rule.example.b", "outcome": "unreadable"}
+        self.assertIsNone(self.missing_unit([a, b]))
+        self.assertIn("is not in the report", self.missing_unit([a]))
+        self.assertIn("is changed, not unreadable", self.missing_unit([a, dict(b, outcome="changed")]))
+        self.assertIn("is unchanged, not unreadable", self.missing_unit([a, dict(b, outcome="unchanged")]))
+
+    def test_merge_never_unchanged_without_a_partial_saying_so(self):
+        unit = dict(self.UNIT, id="host:a.example.com")
+        request = {"input": {"plan": {"units": [unit]}, "partials": [
+            {"unit": unit["id"], "results": [{"node": "rule.example.a", "outcome": "changed"},
+                                             {"node": "rule.example.b", "outcome": "unchanged"}], "notReached": []}]}}
+        ok = [{"node": "rule.example.a", "outcome": "changed"}, {"node": "rule.example.b", "outcome": "unchanged"}]
+        self.assertIsNone(invariants("merge", request, {"results": ok}))
+        self.assertIn("rule.example.a is unchanged without a partial result saying so",
+                      invariants("merge", request, {"results": [dict(ok[0], outcome="unchanged"), ok[1]]}))
+
     def test_run_unit_names_each_fact_once(self):
         part = {"requests": 2, "results": [{"node": "rule.example.a"}], "notReached": ["rule.example.b"]}
         self.assertIsNone(invariants("run-unit", {"input": self.UNIT}, part))
@@ -103,6 +141,33 @@ class Invariants(unittest.TestCase):
         self.assertIsNone(self.merge([a], ["rule.example.b"]))
         self.assertIn("was not reached but is in the report", self.merge([a, b], ["rule.example.b"]))
         self.assertIn("neither in the report nor not reached", self.merge([a], []))
+
+
+class Examples(unittest.TestCase):
+    """contract/check_examples.py holds a counter-example only when the validator reports a finding (exit 2),
+    not when it fails for another reason."""
+
+    def check(self, validator_exit):
+        with tempfile.TemporaryDirectory() as tmp:
+            fake = os.path.join(tmp, "validator")
+            with open(fake, "w") as f:
+                f.write(f"#!{sys.executable}\nimport sys\nsys.exit({validator_exit})\n")
+            os.chmod(fake, 0o755)
+            examples = os.path.join(tmp, "examples")
+            os.mkdir(examples)
+            with open(os.path.join(examples, "one.json"), "w") as f:
+                json.dump({"groups": [{"schema": "https://example.com/s.json", "valid": [],
+                                       "invalid": [{"name": "rejected", "instance": {}}]}]}, f)
+            out = subprocess.run([sys.executable, os.path.join(ROOT, "contract", "check_examples.py"), "--validator", fake,
+                                  "--report-schema", os.devnull, "--examples", examples], capture_output=True, text=True)
+        return out.returncode
+
+    def test_a_finding_holds_a_counter_example(self):
+        self.assertEqual(self.check(2), 0)
+
+    def test_a_validator_error_does_not(self):
+        self.assertEqual(self.check(1), 1)
+        self.assertEqual(self.check(3), 1)
 
 
 if __name__ == "__main__":
