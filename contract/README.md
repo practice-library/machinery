@@ -65,7 +65,7 @@ A note on this plugin, not a rule of the contract: `plan` makes one unit per hos
 
 ## The report is referenced, not redefined
 
-`merge` returns a report that must validate against `spec/refresh-report/schema.json` of practice-library/graphs. The contract schemas reference it by its `$id`, and the pin is the one data row in `pins.json`. The repository has no release tag yet, so the pin is a full commit. When a tag exists, or the schema moves to practice-library/.github, only that row changes. CI checks out the pinned file and confirms its `$id` before running conformance.
+`merge` returns a report that must validate against `spec/refresh-report/schema.json` of practice-library/.github, where it lives since release v2.1.0. The contract schemas reference it by its `$id`, and the pin is the one data row in `pins.json`: the release tag and the commit it names. A new release changes only that row. CI checks out the pinned file, confirms its `$id`, and runs conformance against it. The unit tests' copy (`tests/fixtures/graphs/spec/refresh-report/schema.json`) must equal it byte for byte.
 
 ## Conformance
 

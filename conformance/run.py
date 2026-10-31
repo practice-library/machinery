@@ -241,7 +241,7 @@ def run_case(plugin, validator, verb, case, defaults):
         if verb == "describe":
             ref = "https://github.com/practice-library/machinery/contract/v0/describe.schema.json"
         elif verb == "merge":
-            ref = "https://github.com/practice-library/graphs/spec/refresh-report/schema.json"
+            ref = "https://github.com/practice-library/.github/spec/refresh-report/schema.json"
         else:
             ref = f"{FACT}#/$defs/{DATA_DEF[verb]}"
         why = validator.check(ref, data) or invariants(verb, request, data)

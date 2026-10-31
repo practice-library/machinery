@@ -35,7 +35,7 @@
        "name": "merge",
        "shardable": false,
        "input": "https://github.com/practice-library/machinery/contract/v0/fact-refresh.schema.json#/$defs/mergeInput",
-       "output": "https://github.com/practice-library/graphs/spec/refresh-report/schema.json"
+       "output": "https://github.com/practice-library/.github/spec/refresh-report/schema.json"
       }
      ],
      "protocol": "0"

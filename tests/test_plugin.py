@@ -406,7 +406,7 @@ class Boundary(unittest.TestCase):
         job = "https://github.com/practice-library/machinery/contract/v0/fact-refresh.schema.json#/$defs/"
         self.assertEqual([(v["name"], v["input"], v["output"]) for v in env["data"]["verbs"]],
                          [("plan", job + "planInput", job + "plan"), ("run-unit", job + "unit", job + "partial"),
-                          ("merge", job + "mergeInput", "https://github.com/practice-library/graphs/spec/refresh-report/schema.json")])
+                          ("merge", job + "mergeInput", "https://github.com/practice-library/.github/spec/refresh-report/schema.json")])
 
 
 class Cells(unittest.TestCase):
