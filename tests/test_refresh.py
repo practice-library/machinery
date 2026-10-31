@@ -355,6 +355,32 @@ class SchemaUrl(unittest.TestCase):
         self.assertTrue(plain_url(src))
 
 
+class TableQuotes(unittest.TestCase):
+    def run_row(self, stored, page):
+        with GraphsCopy() as root:
+            path = os.path.join(root, "vendors/example/graph/nodes/plan.example.free.json")
+            with open(path, encoding="utf-8") as f:
+                node = json.load(f)
+            node["attrs"]["quote"] = stored
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(node, f)
+            rec = exchanges()
+            rec["https://docs.example.com/plans"] = [{"status": 200, "headers": {"content-type": "text/html"}, "body": page}]
+            return by_node(run(root=root, recorded=rec)[0])["plan.example.free"]
+
+    def test_a_stored_markdown_row_is_found_as_cells_of_a_table_row(self):
+        r = self.run_row("| Free | 1,000 calls |", "<table><tr><td>Free</td><td>1,000 <b>calls</b></td></tr></table>")
+        self.assertEqual(r["outcome"], "unchanged")
+
+    def test_a_stored_markdown_row_with_a_changed_cell_is_changed(self):
+        r = self.run_row("| Free | 1,000 calls |", "<table><tr><td>Free</td><td>1,500 calls</td></tr></table>")
+        self.assertEqual(r["outcome"], "changed")
+
+    def test_a_stored_markdown_row_is_not_found_in_running_text(self):
+        r = self.run_row("| Free | 1,000 calls |", "<p>Free 1,000 calls</p>")
+        self.assertEqual(r["outcome"], "changed")
+
+
 class Pacing(unittest.TestCase):
     def test_every_request_sends_the_listed_user_agent(self):
         _, t, _ = run()

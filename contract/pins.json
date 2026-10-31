@@ -1,0 +1,10 @@
+{
+  "refreshReport": {
+    "repository": "practice-library/graphs",
+    "tag": null,
+    "commit": "7a773162b26550268a685fe52dd08257ef6a6a06",
+    "path": "spec/refresh-report/schema.json",
+    "id": "https://github.com/practice-library/graphs/spec/refresh-report/schema.json",
+    "note": "The report schema a merge returns, referenced by its $id and never copied. The repository has no release tag yet, so the pin is a full commit; when a tag exists, or the schema moves to practice-library/.github, only this row changes."
+  }
+}

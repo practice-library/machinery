@@ -19,15 +19,15 @@ import hashlib
 import math
 import re
 import time
-from dataclasses import dataclass
-from datetime import date, datetime, timezone
+from dataclasses import dataclass, field
+from datetime import date, datetime, timedelta, timezone
 from typing import Dict, List, Optional, Tuple
 from urllib.parse import urljoin, urlsplit
 
 from . import robots as robotstxt
 from .graphs import Host, Policy, load_nodes
 from .http import Response, TransportError
-from .text import has_quote, page_text, quote_is_empty
+from .text import has_cells, has_quote, page_rows, page_text, quote_form, quote_is_empty
 
 REDIRECTS = (301, 302, 303, 307, 308)
 MAX_HOPS = 5
@@ -70,17 +70,19 @@ class Page:
     status: Optional[int] = None
     final_url: Optional[str] = None
     text: Optional[str] = None  # set only when the page was read
+    rows: List[List[str]] = field(default_factory=list)  # its tables' rows, for a quote stored as cells
     reason: Optional[str] = None  # why it could not be read
     retry_after: Optional[int] = None
 
 
 class Refresher:
     def __init__(self, policy: Policy, transport, clock: Optional[Clock] = None,
-                 pace: float = DEFAULT_PACE_SECONDS) -> None:
+                 pace: float = DEFAULT_PACE_SECONDS, deadline: Optional[datetime] = None) -> None:
         self.policy = policy
         self.transport = transport
         self.clock = clock or Clock()
         self.pace = pace
+        self.deadline = deadline  # no request starts that could still be running at this time
         self.run_requests = 0  # across every graph of the run
         self.host_requests: Dict[str, int] = {}
         self.last_request: Dict[str, datetime] = {}
@@ -94,10 +96,14 @@ class Refresher:
         if self.host_requests.get(host.host, 0) >= host.max_requests:
             raise CapReached("host")
         last = self.last_request.get(host.host)
-        if last is not None:
-            wait = self.pace - (self.clock.now() - last).total_seconds()
-            if wait > 0:
-                self.clock.sleep(wait)
+        wait = self.pace - (self.clock.now() - last).total_seconds() if last is not None else 0.0
+        if self.deadline is not None and (
+                self.clock.now() + timedelta(seconds=max(wait, 0.0) + host.timeout_seconds)) > self.deadline:
+            # the caller's time cap: a request that, after its pacing wait, could still be running at the
+            # deadline does not start; the rest waits for the next run
+            raise CapReached("run")
+        if wait > 0:
+            self.clock.sleep(wait)
         self.run_requests += 1
         self.graph_requests += 1
         self.host_requests[host.host] = self.host_requests.get(host.host, 0) + 1
@@ -222,19 +228,24 @@ class Refresher:
                 body = resp.body.decode(m.group(1) if m else "utf-8", "replace")
             except LookupError:
                 body = resp.body.decode("utf-8", "replace")
-            return Page(at, status=resp.status, final_url=url, text=page_text(body, host.format))
+            return Page(at, status=resp.status, final_url=url, text=page_text(body, host.format),
+                        rows=page_rows(body, host.format))
         return Page(stamp(self.clock.now()), reason=f"unreachable: more than {MAX_HOPS} redirects")
 
     # -- one graph ---------------------------------------------------------------------------------------
     def refresh_graph(self, root: str, graph: str, commit: str, run_id: int, run_url: str) -> dict:
-        vendor = graph.split("/", 1)[1]
+        return self.refresh_nodes(load_nodes(root, graph), graph, graph.split("/", 1)[1], commit, run_id, run_url)
+
+    def refresh_nodes(self, nodes: List[dict], graph: str, vendor: str, commit: str, run_id: int,
+                      run_url: str) -> dict:
+        """One report for these nodes: the graph's run, or one work unit's share of it."""
         self.graph_requests = 0
         self.skipped: List[Tuple[str, str, str]] = []  # (graph, node, reason): facts left out of the report
         started = self.clock.now()
         today: date = started.date()
         results: List[dict] = []
         due: List[Tuple[dict, Host]] = []
-        for node in load_nodes(root, graph):
+        for node in nodes:
             src = node["source"]
             if not plain_url(src):
                 # A port, userinfo, upper case or a scheme other than https: never fetched. The report's
@@ -332,11 +343,13 @@ class Refresher:
                 r["retryAfterSeconds"] = page.retry_after
             return r
         r["sha256"] = hashlib.sha256(page.text.encode("utf-8")).hexdigest()
-        if quote_is_empty(node["attrs"]["quote"]):
+        quote = quote_form(node["attrs"]["quote"])
+        cells = quote.get("cells")
+        if quote_is_empty(" ".join(cells) if cells is not None else quote["text"]):
             r["outcome"] = "unreadable"
             r["reason"] = "unreadable: the stored quote is empty, so nothing can be confirmed"
             return r
-        if has_quote(page.text, node["attrs"]["quote"]):
+        if has_cells(page.rows, cells) if cells is not None else has_quote(page.text, quote["text"]):
             r["outcome"] = "unchanged"
             if page.final_url != node["source"]:
                 r["reason"] = f"quote-moved: the source redirects to {page.final_url}; the quote is there"[:300]

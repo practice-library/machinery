@@ -1,0 +1,107 @@
+{
+ "groups": [
+  {
+   "schema": "https://github.com/practice-library/machinery/contract/v0/envelope.schema.json",
+   "valid": [
+    {
+     "name": "a success",
+     "instance": {
+      "ok": true,
+      "data": {},
+      "notRead": [],
+      "warnings": []
+     }
+    },
+    {
+     "name": "a failure",
+     "instance": {
+      "ok": false,
+      "data": null,
+      "notRead": [],
+      "warnings": [
+       "the request is not JSON"
+      ]
+     }
+    },
+    {
+     "name": "a success with a note",
+     "instance": {
+      "ok": true,
+      "data": {},
+      "notRead": [
+       {
+        "what": "rule.example.a",
+        "why": "blocked: not a plain https URL"
+       }
+      ],
+      "warnings": []
+     }
+    }
+   ],
+   "invalid": [
+    {
+     "name": "a failure with data",
+     "instance": {
+      "ok": false,
+      "data": {},
+      "notRead": [],
+      "warnings": [
+       "the request is not JSON"
+      ]
+     }
+    },
+    {
+     "name": "a failure without a warning",
+     "instance": {
+      "ok": false,
+      "data": null,
+      "notRead": [],
+      "warnings": []
+     }
+    },
+    {
+     "name": "an empty warning",
+     "instance": {
+      "ok": false,
+      "data": null,
+      "notRead": [],
+      "warnings": [
+       ""
+      ]
+     }
+    },
+    {
+     "name": "an unknown key",
+     "instance": {
+      "ok": true,
+      "data": {},
+      "notRead": [],
+      "warnings": [],
+      "extra": 1
+     }
+    },
+    {
+     "name": "no notRead",
+     "instance": {
+      "ok": true,
+      "data": {},
+      "warnings": []
+     }
+    },
+    {
+     "name": "a notRead entry without why",
+     "instance": {
+      "ok": true,
+      "data": {},
+      "notRead": [
+       {
+        "what": "x"
+       }
+      ],
+      "warnings": []
+     }
+    }
+   ]
+  }
+ ]
+}

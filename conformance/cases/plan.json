@@ -1,0 +1,656 @@
+{
+ "verb": "plan",
+ "about": "One graph to work units, one per source host, with the run-wide request cap split between them.",
+ "defaults": {
+  "contract": "0",
+  "verb": "plan",
+  "caps": {
+   "timeSeconds": 60,
+   "outputBytes": 1048576
+  },
+  "input": {
+   "graph": "vendors/example",
+   "commit": "0e6f5ed237dd52f9fe02a33f8c6b8ec653a3a2c3",
+   "run": {
+    "id": 7,
+    "url": "https://github.com/practice-library/machinery/actions/runs/7"
+   },
+   "now": "2026-10-31T12:00:00Z"
+  }
+ },
+ "cases": [
+  {
+   "name": "due facts by host, a table quote as cells, an unlisted host decided, a non-plain URL not read",
+   "request": {
+    "input": {
+     "policy": {
+      "userAgent": "practice-library-graphs/1 (+https://github.com/practice-library/graphs)",
+      "maxRequestsPerRun": 50,
+      "retryAfterMaxSeconds": 60,
+      "unreadableRunsBeforeIssue": 3,
+      "hosts": [
+       {
+        "host": "docs.example.com",
+        "vendor": "example",
+        "robots": {
+         "url": "https://docs.example.com/robots.txt",
+         "checkedAt": "2026-10-31T12:00:00Z",
+         "verdict": "allowed"
+        },
+        "terms": {
+         "url": "https://docs.example.com/terms",
+         "checkedAt": "2026-10-31T12:00:00Z",
+         "quote": "Automated reading is permitted."
+        },
+        "format": "html",
+        "maxRequestsPerRun": 20,
+        "minIntervalDays": 7,
+        "maxBytes": 2000000,
+        "timeoutSeconds": 30
+       },
+       {
+        "host": "help.example.com",
+        "vendor": "example",
+        "robots": {
+         "url": "https://help.example.com/robots.txt",
+         "checkedAt": "2026-10-31T12:00:00Z",
+         "verdict": "allowed"
+        },
+        "terms": {
+         "url": "https://help.example.com/terms",
+         "checkedAt": "2026-10-31T12:00:00Z",
+         "quote": "Automated reading is permitted."
+        },
+        "format": "html",
+        "maxRequestsPerRun": 5,
+        "minIntervalDays": 7,
+        "maxBytes": 2000000,
+        "timeoutSeconds": 30
+       }
+      ]
+     },
+     "nodes": [
+      {
+       "id": "limit.example.burst",
+       "type": "limit",
+       "name": "limit.example.burst",
+       "source": "https://docs.example.com/limits",
+       "measuredAt": "2026-09-01",
+       "attrs": {
+        "verdict": "allowed",
+        "fetched_at": "2026-09-01T10:00:00Z",
+        "quote": "Each key may send 20 requests per second."
+       },
+       "edges": []
+      },
+      {
+       "id": "rule.example.fair-use",
+       "type": "rule",
+       "name": "rule.example.fair-use",
+       "source": "https://docs.example.com/limits",
+       "measuredAt": "2026-09-03",
+       "attrs": {
+        "verdict": "allowed",
+        "fetched_at": "2026-09-03T10:00:00Z",
+        "quote": "Sustained traffic is throttled."
+       },
+       "edges": []
+      },
+      {
+       "id": "plan.example.free",
+       "type": "plan",
+       "name": "plan.example.free",
+       "source": "https://help.example.com/plans",
+       "measuredAt": "2026-09-02",
+       "attrs": {
+        "verdict": "allowed",
+        "fetched_at": "2026-09-02T10:00:00Z",
+        "quote": "| Free | 1,000 calls | Not applicable |"
+       },
+       "edges": []
+      },
+      {
+       "id": "feature.example.fresh",
+       "type": "feature",
+       "name": "feature.example.fresh",
+       "source": "https://docs.example.com/features",
+       "measuredAt": "2026-10-30",
+       "attrs": {
+        "verdict": "allowed",
+        "fetched_at": "2026-10-30T10:00:00Z",
+        "quote": "Webhooks are available."
+       },
+       "edges": []
+      },
+      {
+       "id": "term.example.offsite",
+       "type": "term",
+       "name": "term.example.offsite",
+       "source": "https://unlisted.example.net/terms",
+       "measuredAt": "2026-09-06",
+       "attrs": {
+        "verdict": "allowed",
+        "fetched_at": "2026-09-06T10:00:00Z",
+        "quote": "Terms may change."
+       },
+       "edges": []
+      },
+      {
+       "id": "term.example.port",
+       "type": "term",
+       "name": "term.example.port",
+       "source": "https://docs.example.com:8443/terms",
+       "measuredAt": "2026-09-06",
+       "attrs": {
+        "verdict": "allowed",
+        "fetched_at": "2026-09-06T10:00:00Z",
+        "quote": "Terms may change."
+       },
+       "edges": []
+      }
+     ]
+    }
+   },
+   "expect": {
+    "data": {
+     "maxParallel": 2,
+     "startedAt": "2026-10-31T12:00:00Z",
+     "units": [
+      {
+       "id": "host:docs.example.com",
+       "shardKey": "docs.example.com",
+       "budget": {
+        "requests": 20
+       },
+       "facts": [
+        {
+         "node": "limit.example.burst",
+         "quote": {
+          "text": "Each key may send 20 requests per second."
+         }
+        },
+        {
+         "node": "rule.example.fair-use"
+        }
+       ]
+      },
+      {
+       "id": "host:help.example.com",
+       "budget": {
+        "requests": 5
+       },
+       "facts": [
+        {
+         "node": "plan.example.free",
+         "quote": {
+          "cells": [
+           "Free",
+           "1,000 calls",
+           "Not applicable"
+          ]
+         }
+        }
+       ]
+      }
+     ],
+     "decided": [
+      {
+       "node": "term.example.offsite",
+       "outcome": "unreadable",
+       "reason": {
+        "$startsWith": "blocked:"
+       }
+      }
+     ]
+    },
+    "notRead": [
+     {
+      "what": "term.example.port",
+      "why": {
+       "$startsWith": "blocked:"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "name": "the run-wide cap is split oldest first; the budgets add up to exactly the cap; a host left with less than 2 waits",
+   "request": {
+    "input": {
+     "policy": {
+      "userAgent": "practice-library-graphs/1 (+https://github.com/practice-library/graphs)",
+      "maxRequestsPerRun": 5,
+      "retryAfterMaxSeconds": 60,
+      "unreadableRunsBeforeIssue": 3,
+      "hosts": [
+       {
+        "host": "a.example.com",
+        "vendor": "example",
+        "robots": {
+         "url": "https://a.example.com/robots.txt",
+         "checkedAt": "2026-10-31T12:00:00Z",
+         "verdict": "allowed"
+        },
+        "terms": {
+         "url": "https://a.example.com/terms",
+         "checkedAt": "2026-10-31T12:00:00Z",
+         "quote": "Automated reading is permitted."
+        },
+        "format": "html",
+        "maxRequestsPerRun": 20,
+        "minIntervalDays": 7,
+        "maxBytes": 2000000,
+        "timeoutSeconds": 30
+       },
+       {
+        "host": "b.example.com",
+        "vendor": "example",
+        "robots": {
+         "url": "https://b.example.com/robots.txt",
+         "checkedAt": "2026-10-31T12:00:00Z",
+         "verdict": "allowed"
+        },
+        "terms": {
+         "url": "https://b.example.com/terms",
+         "checkedAt": "2026-10-31T12:00:00Z",
+         "quote": "Automated reading is permitted."
+        },
+        "format": "html",
+        "maxRequestsPerRun": 20,
+        "minIntervalDays": 7,
+        "maxBytes": 2000000,
+        "timeoutSeconds": 30
+       },
+       {
+        "host": "c.example.com",
+        "vendor": "example",
+        "robots": {
+         "url": "https://c.example.com/robots.txt",
+         "checkedAt": "2026-10-31T12:00:00Z",
+         "verdict": "allowed"
+        },
+        "terms": {
+         "url": "https://c.example.com/terms",
+         "checkedAt": "2026-10-31T12:00:00Z",
+         "quote": "Automated reading is permitted."
+        },
+        "format": "html",
+        "maxRequestsPerRun": 20,
+        "minIntervalDays": 7,
+        "maxBytes": 2000000,
+        "timeoutSeconds": 30
+       }
+      ]
+     },
+     "nodes": [
+      {
+       "id": "rule.example.a1",
+       "type": "rule",
+       "name": "rule.example.a1",
+       "source": "https://a.example.com/1",
+       "measuredAt": "2026-09-01",
+       "attrs": {
+        "verdict": "allowed",
+        "fetched_at": "2026-09-01T10:00:00Z",
+        "quote": "A one."
+       },
+       "edges": []
+      },
+      {
+       "id": "rule.example.a2",
+       "type": "rule",
+       "name": "rule.example.a2",
+       "source": "https://a.example.com/2",
+       "measuredAt": "2026-09-01",
+       "attrs": {
+        "verdict": "allowed",
+        "fetched_at": "2026-09-01T10:00:00Z",
+        "quote": "A two."
+       },
+       "edges": []
+      },
+      {
+       "id": "rule.example.b1",
+       "type": "rule",
+       "name": "rule.example.b1",
+       "source": "https://b.example.com/1",
+       "measuredAt": "2026-09-02",
+       "attrs": {
+        "verdict": "allowed",
+        "fetched_at": "2026-09-02T10:00:00Z",
+        "quote": "B one."
+       },
+       "edges": []
+      },
+      {
+       "id": "rule.example.b2",
+       "type": "rule",
+       "name": "rule.example.b2",
+       "source": "https://b.example.com/2",
+       "measuredAt": "2026-09-02",
+       "attrs": {
+        "verdict": "allowed",
+        "fetched_at": "2026-09-02T10:00:00Z",
+        "quote": "B two."
+       },
+       "edges": []
+      },
+      {
+       "id": "rule.example.c1",
+       "type": "rule",
+       "name": "rule.example.c1",
+       "source": "https://c.example.com/1",
+       "measuredAt": "2026-09-03",
+       "attrs": {
+        "verdict": "allowed",
+        "fetched_at": "2026-09-03T10:00:00Z",
+        "quote": "C one."
+       },
+       "edges": []
+      }
+     ]
+    }
+   },
+   "expect": {
+    "data": {
+     "units": [
+      {
+       "shardKey": "a.example.com",
+       "budget": {
+        "requests": 3
+       }
+      },
+      {
+       "shardKey": "b.example.com",
+       "budget": {
+        "requests": 2
+       }
+      }
+     ]
+    },
+    "notRead": [
+     {
+      "what": "rule.example.c1",
+      "why": {
+       "$startsWith": "the run-wide request cap"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "name": "five hosts are five units, never more than 3 in parallel",
+   "request": {
+    "input": {
+     "policy": {
+      "userAgent": "practice-library-graphs/1 (+https://github.com/practice-library/graphs)",
+      "maxRequestsPerRun": 50,
+      "retryAfterMaxSeconds": 60,
+      "unreadableRunsBeforeIssue": 3,
+      "hosts": [
+       {
+        "host": "h1.example.com",
+        "vendor": "example",
+        "robots": {
+         "url": "https://h1.example.com/robots.txt",
+         "checkedAt": "2026-10-31T12:00:00Z",
+         "verdict": "allowed"
+        },
+        "terms": {
+         "url": "https://h1.example.com/terms",
+         "checkedAt": "2026-10-31T12:00:00Z",
+         "quote": "Automated reading is permitted."
+        },
+        "format": "html",
+        "maxRequestsPerRun": 20,
+        "minIntervalDays": 7,
+        "maxBytes": 2000000,
+        "timeoutSeconds": 30
+       },
+       {
+        "host": "h2.example.com",
+        "vendor": "example",
+        "robots": {
+         "url": "https://h2.example.com/robots.txt",
+         "checkedAt": "2026-10-31T12:00:00Z",
+         "verdict": "allowed"
+        },
+        "terms": {
+         "url": "https://h2.example.com/terms",
+         "checkedAt": "2026-10-31T12:00:00Z",
+         "quote": "Automated reading is permitted."
+        },
+        "format": "html",
+        "maxRequestsPerRun": 20,
+        "minIntervalDays": 7,
+        "maxBytes": 2000000,
+        "timeoutSeconds": 30
+       },
+       {
+        "host": "h3.example.com",
+        "vendor": "example",
+        "robots": {
+         "url": "https://h3.example.com/robots.txt",
+         "checkedAt": "2026-10-31T12:00:00Z",
+         "verdict": "allowed"
+        },
+        "terms": {
+         "url": "https://h3.example.com/terms",
+         "checkedAt": "2026-10-31T12:00:00Z",
+         "quote": "Automated reading is permitted."
+        },
+        "format": "html",
+        "maxRequestsPerRun": 20,
+        "minIntervalDays": 7,
+        "maxBytes": 2000000,
+        "timeoutSeconds": 30
+       },
+       {
+        "host": "h4.example.com",
+        "vendor": "example",
+        "robots": {
+         "url": "https://h4.example.com/robots.txt",
+         "checkedAt": "2026-10-31T12:00:00Z",
+         "verdict": "allowed"
+        },
+        "terms": {
+         "url": "https://h4.example.com/terms",
+         "checkedAt": "2026-10-31T12:00:00Z",
+         "quote": "Automated reading is permitted."
+        },
+        "format": "html",
+        "maxRequestsPerRun": 20,
+        "minIntervalDays": 7,
+        "maxBytes": 2000000,
+        "timeoutSeconds": 30
+       },
+       {
+        "host": "h5.example.com",
+        "vendor": "example",
+        "robots": {
+         "url": "https://h5.example.com/robots.txt",
+         "checkedAt": "2026-10-31T12:00:00Z",
+         "verdict": "allowed"
+        },
+        "terms": {
+         "url": "https://h5.example.com/terms",
+         "checkedAt": "2026-10-31T12:00:00Z",
+         "quote": "Automated reading is permitted."
+        },
+        "format": "html",
+        "maxRequestsPerRun": 20,
+        "minIntervalDays": 7,
+        "maxBytes": 2000000,
+        "timeoutSeconds": 30
+       }
+      ]
+     },
+     "nodes": [
+      {
+       "id": "rule.example.h1",
+       "type": "rule",
+       "name": "rule.example.h1",
+       "source": "https://h1.example.com/x",
+       "measuredAt": "2026-09-01",
+       "attrs": {
+        "verdict": "allowed",
+        "fetched_at": "2026-09-01T10:00:00Z",
+        "quote": "X."
+       },
+       "edges": []
+      },
+      {
+       "id": "rule.example.h2",
+       "type": "rule",
+       "name": "rule.example.h2",
+       "source": "https://h2.example.com/x",
+       "measuredAt": "2026-09-01",
+       "attrs": {
+        "verdict": "allowed",
+        "fetched_at": "2026-09-01T10:00:00Z",
+        "quote": "X."
+       },
+       "edges": []
+      },
+      {
+       "id": "rule.example.h3",
+       "type": "rule",
+       "name": "rule.example.h3",
+       "source": "https://h3.example.com/x",
+       "measuredAt": "2026-09-01",
+       "attrs": {
+        "verdict": "allowed",
+        "fetched_at": "2026-09-01T10:00:00Z",
+        "quote": "X."
+       },
+       "edges": []
+      },
+      {
+       "id": "rule.example.h4",
+       "type": "rule",
+       "name": "rule.example.h4",
+       "source": "https://h4.example.com/x",
+       "measuredAt": "2026-09-01",
+       "attrs": {
+        "verdict": "allowed",
+        "fetched_at": "2026-09-01T10:00:00Z",
+        "quote": "X."
+       },
+       "edges": []
+      },
+      {
+       "id": "rule.example.h5",
+       "type": "rule",
+       "name": "rule.example.h5",
+       "source": "https://h5.example.com/x",
+       "measuredAt": "2026-09-01",
+       "attrs": {
+        "verdict": "allowed",
+        "fetched_at": "2026-09-01T10:00:00Z",
+        "quote": "X."
+       },
+       "edges": []
+      }
+     ]
+    }
+   },
+   "expect": {
+    "data": {
+     "maxParallel": 3,
+     "units": [
+      {
+       "shardKey": "h1.example.com"
+      },
+      {
+       "shardKey": "h2.example.com"
+      },
+      {
+       "shardKey": "h3.example.com"
+      },
+      {
+       "shardKey": "h4.example.com"
+      },
+      {
+       "shardKey": "h5.example.com"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "a host with exactly 7 days since measuredAt is due; 6 days is not",
+   "request": {
+    "input": {
+     "policy": {
+      "userAgent": "practice-library-graphs/1 (+https://github.com/practice-library/graphs)",
+      "maxRequestsPerRun": 50,
+      "retryAfterMaxSeconds": 60,
+      "unreadableRunsBeforeIssue": 3,
+      "hosts": [
+       {
+        "host": "docs.example.com",
+        "vendor": "example",
+        "robots": {
+         "url": "https://docs.example.com/robots.txt",
+         "checkedAt": "2026-10-31T12:00:00Z",
+         "verdict": "allowed"
+        },
+        "terms": {
+         "url": "https://docs.example.com/terms",
+         "checkedAt": "2026-10-31T12:00:00Z",
+         "quote": "Automated reading is permitted."
+        },
+        "format": "html",
+        "maxRequestsPerRun": 20,
+        "minIntervalDays": 7,
+        "maxBytes": 2000000,
+        "timeoutSeconds": 30
+       }
+      ]
+     },
+     "nodes": [
+      {
+       "id": "rule.example.seven",
+       "type": "rule",
+       "name": "rule.example.seven",
+       "source": "https://docs.example.com/7",
+       "measuredAt": "2026-10-24",
+       "attrs": {
+        "verdict": "allowed",
+        "fetched_at": "2026-10-24T10:00:00Z",
+        "quote": "Seven."
+       },
+       "edges": []
+      },
+      {
+       "id": "rule.example.six",
+       "type": "rule",
+       "name": "rule.example.six",
+       "source": "https://docs.example.com/6",
+       "measuredAt": "2026-10-25",
+       "attrs": {
+        "verdict": "allowed",
+        "fetched_at": "2026-10-25T10:00:00Z",
+        "quote": "Six."
+       },
+       "edges": []
+      }
+     ]
+    }
+   },
+   "expect": {
+    "data": {
+     "units": [
+      {
+       "facts": [
+        {
+         "node": "rule.example.seven"
+        }
+       ]
+      }
+     ]
+    }
+   }
+  }
+ ]
+}

@@ -1,0 +1,276 @@
+{
+ "groups": [
+  {
+   "schema": "https://github.com/practice-library/machinery/contract/v0/describe.schema.json",
+   "valid": [
+    {
+     "name": "a shardable job",
+     "instance": {
+      "name": "fact-refresh-python",
+      "version": "0.1.0",
+      "protocol": "0",
+      "contracts": [
+       "0"
+      ],
+      "job": "fact-refresh",
+      "verbs": [
+       {
+        "name": "plan",
+        "shardable": false,
+        "input": "https://github.com/practice-library/machinery/contract/v0/fact-refresh.schema.json#/$defs/planInput",
+        "output": "https://github.com/practice-library/machinery/contract/v0/fact-refresh.schema.json#/$defs/plan"
+       },
+       {
+        "name": "run-unit",
+        "shardable": true,
+        "input": "https://github.com/practice-library/machinery/contract/v0/fact-refresh.schema.json#/$defs/unit",
+        "output": "https://github.com/practice-library/machinery/contract/v0/fact-refresh.schema.json#/$defs/partial"
+       },
+       {
+        "name": "merge",
+        "shardable": false,
+        "input": "https://github.com/practice-library/machinery/contract/v0/fact-refresh.schema.json#/$defs/mergeInput",
+        "output": "https://github.com/practice-library/graphs/spec/refresh-report/schema.json"
+       }
+      ]
+     }
+    },
+    {
+     "name": "a job that is not shardable",
+     "instance": {
+      "name": "fact-refresh-python",
+      "version": "0.1.0",
+      "protocol": "0",
+      "contracts": [
+       "0"
+      ],
+      "job": "fact-refresh",
+      "verbs": [
+       {
+        "name": "run",
+        "shardable": false,
+        "input": "https://github.com/practice-library/machinery/contract/v0/fact-refresh.schema.json#/$defs/runInput",
+        "output": "https://github.com/practice-library/machinery/contract/v0/fact-refresh.schema.json#/$defs/runData"
+       }
+      ]
+     }
+    }
+   ],
+   "invalid": [
+    {
+     "name": "no protocol",
+     "instance": {
+      "name": "fact-refresh-python",
+      "version": "0.1.0",
+      "contracts": [
+       "0"
+      ],
+      "job": "fact-refresh",
+      "verbs": [
+       {
+        "name": "plan",
+        "shardable": false,
+        "input": "https://github.com/practice-library/machinery/contract/v0/fact-refresh.schema.json#/$defs/planInput",
+        "output": "https://github.com/practice-library/machinery/contract/v0/fact-refresh.schema.json#/$defs/plan"
+       },
+       {
+        "name": "run-unit",
+        "shardable": true,
+        "input": "https://github.com/practice-library/machinery/contract/v0/fact-refresh.schema.json#/$defs/unit",
+        "output": "https://github.com/practice-library/machinery/contract/v0/fact-refresh.schema.json#/$defs/partial"
+       },
+       {
+        "name": "merge",
+        "shardable": false,
+        "input": "https://github.com/practice-library/machinery/contract/v0/fact-refresh.schema.json#/$defs/mergeInput",
+        "output": "https://github.com/practice-library/graphs/spec/refresh-report/schema.json"
+       }
+      ]
+     }
+    },
+    {
+     "name": "plan without merge",
+     "instance": {
+      "name": "fact-refresh-python",
+      "version": "0.1.0",
+      "protocol": "0",
+      "contracts": [
+       "0"
+      ],
+      "job": "fact-refresh",
+      "verbs": [
+       {
+        "name": "plan",
+        "shardable": false,
+        "input": "https://github.com/practice-library/machinery/contract/v0/fact-refresh.schema.json#/$defs/planInput",
+        "output": "https://github.com/practice-library/machinery/contract/v0/fact-refresh.schema.json#/$defs/plan"
+       },
+       {
+        "name": "run-unit",
+        "shardable": true,
+        "input": "https://github.com/practice-library/machinery/contract/v0/fact-refresh.schema.json#/$defs/unit",
+        "output": "https://github.com/practice-library/machinery/contract/v0/fact-refresh.schema.json#/$defs/partial"
+       }
+      ]
+     }
+    },
+    {
+     "name": "an unknown verb",
+     "instance": {
+      "name": "fact-refresh-python",
+      "version": "0.1.0",
+      "protocol": "0",
+      "contracts": [
+       "0"
+      ],
+      "job": "fact-refresh",
+      "verbs": [
+       {
+        "name": "plan",
+        "shardable": false,
+        "input": "https://github.com/practice-library/machinery/contract/v0/fact-refresh.schema.json#/$defs/planInput",
+        "output": "https://github.com/practice-library/machinery/contract/v0/fact-refresh.schema.json#/$defs/plan"
+       },
+       {
+        "name": "run-unit",
+        "shardable": true,
+        "input": "https://github.com/practice-library/machinery/contract/v0/fact-refresh.schema.json#/$defs/unit",
+        "output": "https://github.com/practice-library/machinery/contract/v0/fact-refresh.schema.json#/$defs/partial"
+       },
+       {
+        "name": "merge",
+        "shardable": false,
+        "input": "https://github.com/practice-library/machinery/contract/v0/fact-refresh.schema.json#/$defs/mergeInput",
+        "output": "https://github.com/practice-library/graphs/spec/refresh-report/schema.json"
+       },
+       {
+        "name": "fetch",
+        "shardable": false,
+        "input": "https://github.com/practice-library/machinery/contract/v0/fact-refresh.schema.json#/$defs/runInput",
+        "output": "https://github.com/practice-library/machinery/contract/v0/fact-refresh.schema.json#/$defs/runData"
+       }
+      ]
+     }
+    },
+    {
+     "name": "a verb without its output schema",
+     "instance": {
+      "name": "fact-refresh-python",
+      "version": "0.1.0",
+      "protocol": "0",
+      "contracts": [
+       "0"
+      ],
+      "job": "fact-refresh",
+      "verbs": [
+       {
+        "name": "run",
+        "shardable": false,
+        "input": "https://github.com/practice-library/machinery/contract/v0/fact-refresh.schema.json#/$defs/runInput"
+       }
+      ]
+     }
+    },
+    {
+     "name": "an input schema that is not an https URL",
+     "instance": {
+      "name": "fact-refresh-python",
+      "version": "0.1.0",
+      "protocol": "0",
+      "contracts": [
+       "0"
+      ],
+      "job": "fact-refresh",
+      "verbs": [
+       {
+        "name": "run",
+        "shardable": false,
+        "input": "planInput",
+        "output": "https://github.com/practice-library/machinery/contract/v0/fact-refresh.schema.json#/$defs/runData"
+       }
+      ]
+     }
+    },
+    {
+     "name": "verbs as an object, as before",
+     "instance": {
+      "name": "fact-refresh-python",
+      "version": "0.1.0",
+      "protocol": "0",
+      "contracts": [
+       "0"
+      ],
+      "job": "fact-refresh",
+      "verbs": {
+       "run": {
+        "shardable": false
+       }
+      }
+     }
+    },
+    {
+     "name": "no contracts",
+     "instance": {
+      "name": "fact-refresh-python",
+      "version": "0.1.0",
+      "protocol": "0",
+      "contracts": [],
+      "job": "fact-refresh",
+      "verbs": [
+       {
+        "name": "plan",
+        "shardable": false,
+        "input": "https://github.com/practice-library/machinery/contract/v0/fact-refresh.schema.json#/$defs/planInput",
+        "output": "https://github.com/practice-library/machinery/contract/v0/fact-refresh.schema.json#/$defs/plan"
+       },
+       {
+        "name": "run-unit",
+        "shardable": true,
+        "input": "https://github.com/practice-library/machinery/contract/v0/fact-refresh.schema.json#/$defs/unit",
+        "output": "https://github.com/practice-library/machinery/contract/v0/fact-refresh.schema.json#/$defs/partial"
+       },
+       {
+        "name": "merge",
+        "shardable": false,
+        "input": "https://github.com/practice-library/machinery/contract/v0/fact-refresh.schema.json#/$defs/mergeInput",
+        "output": "https://github.com/practice-library/graphs/spec/refresh-report/schema.json"
+       }
+      ]
+     }
+    },
+    {
+     "name": "a version that is not x.y.z",
+     "instance": {
+      "name": "fact-refresh-python",
+      "version": "0.1",
+      "protocol": "0",
+      "contracts": [
+       "0"
+      ],
+      "job": "fact-refresh",
+      "verbs": [
+       {
+        "name": "plan",
+        "shardable": false,
+        "input": "https://github.com/practice-library/machinery/contract/v0/fact-refresh.schema.json#/$defs/planInput",
+        "output": "https://github.com/practice-library/machinery/contract/v0/fact-refresh.schema.json#/$defs/plan"
+       },
+       {
+        "name": "run-unit",
+        "shardable": true,
+        "input": "https://github.com/practice-library/machinery/contract/v0/fact-refresh.schema.json#/$defs/unit",
+        "output": "https://github.com/practice-library/machinery/contract/v0/fact-refresh.schema.json#/$defs/partial"
+       },
+       {
+        "name": "merge",
+        "shardable": false,
+        "input": "https://github.com/practice-library/machinery/contract/v0/fact-refresh.schema.json#/$defs/mergeInput",
+        "output": "https://github.com/practice-library/graphs/spec/refresh-report/schema.json"
+       }
+      ]
+     }
+    }
+   ]
+  }
+ ]
+}
