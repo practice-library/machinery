@@ -184,7 +184,7 @@ class Unreachable(unittest.TestCase):
         self.assertEqual(by_node(run(recorded=rec)[0])["plan.example.free"]["outcome"], "unreadable")
 
 
-class Rework(unittest.TestCase):
+class Hardening(unittest.TestCase):
     def test_an_empty_stored_quote_is_unreadable_never_unchanged(self):
         with GraphsCopy() as root:
             path = os.path.join(root, "vendors/example/graph/nodes/limit.example.burst.json")
@@ -334,6 +334,20 @@ class SchemaUrl(unittest.TestCase):
 
     def test_a_source_with_a_trailing_newline_is_blocked(self):
         self.skipped_for("https://docs.example.com/limits\n")
+
+    def test_a_url_one_character_over_the_schema_length_is_not_plain(self):
+        src = "https://docs.example.com/" + "a" * (2001 - len("https://docs.example.com/"))
+        self.assertEqual(len(src), 2001)
+        self.assertFalse(plain_url(src))
+
+    def test_a_robots_txt_redirect_to_a_url_that_is_not_plain_https_is_not_followed(self):
+        rec = exchanges()
+        rec["https://docs.example.com/robots.txt"] = [{"status": 301, "headers": {"location": "http://docs.example.com/robots.txt"}}]
+        rec["http://docs.example.com/robots.txt"] = [{"status": 200, "body": "User-agent: *\nAllow: /\n"}]
+        report, t, _ = run(recorded=rec)
+        self.assertNotIn("http://docs.example.com/robots.txt", t.urls())
+        self.assertIn("aborted", report)
+        self.assertEqual(report["robots"][0]["verdict"], "unreachable")
 
     def test_a_url_of_exactly_the_schema_length_is_plain(self):
         src = "https://docs.example.com/" + "a" * (2000 - len("https://docs.example.com/"))

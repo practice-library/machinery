@@ -89,7 +89,7 @@ GUARDS = [
      f"{P}.Applying.test_open_issue_gets_one_comment_per_run"),
     ("a dry run writes nothing", O, "if dry_run:\n        open_heads.append(pr.branch)",
      "if False:\n        open_heads.append(pr.branch)", f"{P}.Applying.test_dry_run_writes_nothing"),
-    # quality rework of PR #2
+    # whole-quote matching, distrusted hosts, the pull request cap, fenced bodies
     ("a quote is not matched inside a longer word or number", "factrefresh/text.py",
      "if nxt.isalnum():\n        return True", "if False:\n        return True",
      "tests.test_text.WholeQuote.test_a_quote_ending_in_a_digit_does_not_match_a_longer_number"),
@@ -99,37 +99,37 @@ GUARDS = [
     ("an empty quote is never found", "factrefresh/text.py", "if not q:\n        return False",
      "if False:\n        return False", "tests.test_text.WholeQuote.test_an_empty_or_blank_quote_is_never_found"),
     ("an empty stored quote is unreadable", R, 'if quote_is_empty(node["attrs"]["quote"]):', "if False:",
-     f"{T}.Rework.test_an_empty_stored_quote_is_unreadable_never_unchanged"),
+     f"{T}.Hardening.test_an_empty_stored_quote_is_unreadable_never_unchanged"),
     ("table cells separate words", "factrefresh/text.py",
      '"section", "table", "tbody", "td", "tfoot", "th",', '"section", "table", "tbody", "tfoot",',
      "tests.test_text.WholeQuote.test_table_cells_separate_words"),
     ("a host where every quote fails is distrusted", R,
      'for _, r in mine:\n                r["outcome"] = "unreadable"',
      'for _, r in []:\n                r["outcome"] = "unreadable"',
-     f"{T}.Rework.test_a_host_where_every_quote_fails_is_distrusted"),
+     f"{T}.Hardening.test_a_host_where_every_quote_fails_is_distrusted"),
     ("a redirect target must be allowed by robots.txt", R, "if not rules[listed.host].allows(target):", "if False:",
-     f"{T}.Rework.test_a_redirect_robots_txt_disallows_is_not_followed"),
+     f"{T}.Hardening.test_a_redirect_robots_txt_disallows_is_not_followed"),
     ("a redirect target's robots.txt must have been read", R, "if listed.host not in rules:", "if False:",
-     f"{T}.Rework.test_a_redirect_to_a_listed_host_whose_robots_txt_was_not_read_is_not_followed"),
+     f"{T}.Hardening.test_a_redirect_to_a_listed_host_whose_robots_txt_was_not_read_is_not_followed"),
     ("a redirect target must be a plain https URL", R,
      "if not plain_url(target):\n                    return Page(", "if False:\n                    return Page(",
-     f"{T}.Rework.test_a_redirect_to_a_url_that_is_not_plain_https_is_not_followed"),
+     f"{T}.Hardening.test_a_redirect_to_a_url_that_is_not_plain_https_is_not_followed"),
     ("a robots.txt redirect to an unlisted host is not followed", R,
      "break  # an unlisted target: recorded as unreachable below", "listed = at_host",
-     f"{T}.Rework.test_a_robots_txt_redirect_to_an_unlisted_host_is_not_followed"),
+     f"{T}.Hardening.test_a_robots_txt_redirect_to_an_unlisted_host_is_not_followed"),
     ("redirects stop after MAX_HOPS", R, "MAX_HOPS = 5", "MAX_HOPS = 6",
-     f"{T}.Rework.test_redirects_stop_after_max_hops"),
+     f"{T}.Hardening.test_redirects_stop_after_max_hops"),
     ("Retry-After as an HTTP date is read", R, "when = email.utils.parsedate_to_datetime(value)", "when = None",
-     f"{T}.Rework.test_retry_after_as_an_http_date_is_honoured"),
+     f"{T}.Hardening.test_retry_after_as_an_http_date_is_honoured"),
     ("a fact whose source differs from the report is not bumped", O, 'if node["source"] != r["source"]:',
-     "if False:", f"{P}.Rework.test_a_fact_whose_source_differs_from_the_report_is_not_bumped"),
+     "if False:", f"{P}.Hardening.test_a_fact_whose_source_differs_from_the_report_is_not_bumped"),
     ("at most three refresh pull requests are open", O, "if len(ours) >= MAX_OPEN_PULL_REQUESTS:", "if False:",
-     f"{P}.Rework.test_no_more_than_three_refresh_pull_requests_are_open_at_once"),
+     f"{P}.Hardening.test_no_more_than_three_refresh_pull_requests_are_open_at_once"),
     ("report text is fenced in a code span", O, """flat = " ".join(str(text).split()).replace("`", "'")""",
-     "flat = str(text)", f"{P}.Rework.test_report_text_stays_inside_its_code_span"),
+     "flat = str(text)", f"{P}.Hardening.test_report_text_stays_inside_its_code_span"),
     ("no posted body mentions anyone", O, 'p.replace("@", "&#64;") if i % 2 == 0 else p', "p",
-     f"{P}.Rework.test_no_posted_body_mentions_anyone"),
-    # safety follow-ups (issue 3)
+     f"{P}.Hardening.test_no_posted_body_mentions_anyone"),
+    # robots.txt truncation, plain https sources, the total deadline
     ("a robots.txt cut at maxBytes is unreachable", R, "if 200 <= resp.status < 300 and resp.truncated:", "if False:",
      f"{T}.Safety.test_a_robots_txt_cut_at_max_bytes_aborts"),
     ("a source with a port or userinfo is blocked", R,
@@ -140,7 +140,7 @@ GUARDS = [
      "tests.test_http.TotalDeadline.test_a_slow_drip_cannot_outlast_the_total_timeout"),
     ("each read waits at most for the time left", "factrefresh/http.py", "_shrink_timeout(resp, left)", "pass",
      "tests.test_http.TotalDeadline.test_each_read_waits_at_most_for_the_time_left"),
-    # quality rework of PR #4
+    # schema-exact URLs, the deadline on headers, maxBytes boundaries, the left-out summary
     ("a source longer than the schema's url cap is blocked", R,
      "return len(url) <= URL_MAX_LENGTH and URL_RE.fullmatch(url) is not None",
      "return URL_RE.fullmatch(url) is not None",
@@ -167,12 +167,102 @@ GUARDS = [
     ("the left-out list reaches the output", "factrefresh/__main__.py",
      "if notes:\n        lines +=", "if False:\n        lines +=",
      "tests.test_cli.RefreshSummary.test_facts_left_out_of_the_report_are_listed_in_the_output_and_the_step_summary"),
+    # cut-off bodies and four test gaps
+    ("a body shorter than its Content-Length is a transport error", "factrefresh/http.py",
+     "if len(body) <= max_bytes and shorter:", "if False:",
+     "tests.test_http.Gaps.test_a_body_shorter_than_its_content_length_is_unreachable"),
+    # Content-Length: which answers are checked, and how
+    ("only a 2xx body is checked against Content-Length", "factrefresh/http.py",
+     "if 200 <= status < 300:\n            self._check_length", "if True:\n            self._check_length",
+     "tests.test_http.ContentLength.test_a_short_body_on_a_non_2xx_answer_is_still_returned"),
+    ("a body we cut at maxBytes is not a cut-off page", "factrefresh/http.py",
+     "if len(body) <= max_bytes and shorter:", "if True and shorter:",
+     "tests.test_http.ContentLength.test_a_content_length_beyond_max_bytes_is_a_truncated_page_not_an_error"),
+    ("a body one byte short is cut off", "factrefresh/http.py",
+     "shorter = len(got) < len(declared) or", "shorter = len(got) < len(declared) - 1 or",
+     "tests.test_http.ContentLength.test_a_body_one_byte_short_is_cut_off"),
+    ("a chunked body skips the Content-Length check", "factrefresh/http.py",
+     "return  # http.client reads a chunked body", "pass  # http.client reads a chunked body",
+     "tests.test_http.ContentLength.test_a_chunked_body_ignores_a_content_length_it_does_not_match"),
+    ("a body of exactly maxBytes that stops short is cut off", "factrefresh/http.py",
+     "if len(body) <= max_bytes and shorter:", "if len(body) < max_bytes and shorter:",
+     "tests.test_http.ContentLengthBoundaries.test_exactly_100_bytes_at_a_cap_of_100_is_cut_off_not_ours"),
+    ("status 299 is checked", "factrefresh/http.py",
+     "if 200 <= status < 300:\n            self._check_length", "if 200 <= status < 299:\n            self._check_length",
+     "tests.test_http.ContentLengthBoundaries.test_status_299_is_checked"),
+    ("status 300 is not checked", "factrefresh/http.py",
+     "if 200 <= status < 300:\n            self._check_length", "if 200 <= status <= 300:\n            self._check_length",
+     "tests.test_http.ContentLengthBoundaries.test_status_300_is_returned_as_it_is"),
+    ("only exactly chunked skips the check, as http.client decides", "factrefresh/http.py",
+     'chunked = getattr(resp, "chunked", None)',
+     'chunked = "chunked" in hdrs.get("transfer-encoding", "").lower()',
+     "tests.test_http.ContentLengthBoundaries.test_a_transfer_encoding_that_is_not_exactly_chunked_is_still_checked"),
+    ("a 5000-digit Content-Length is a transport error, not a crash", "factrefresh/http.py",
+     "shorter = len(got) < len(declared) or (len(got) == len(declared) and got < declared)",
+     "shorter = len(body) < int(declared)",
+     "tests.test_http.ContentLengthValues.test_a_5000_digit_content_length_is_a_transport_error_not_a_crash",
+     (3, 11)),  # int() refuses over 4300 digits only from Python 3.11; CI runs 3.12
+    ("a list of identical Content-Length values is one value", "factrefresh/http.py",
+     'members = [m.strip() for v in raw for m in v.split(",")]', "members = [v.strip() for v in raw]",
+     "tests.test_http.ContentLengthValues.test_a_list_of_identical_values_is_accepted"),
+    ("05 and 5 are the same Content-Length", "factrefresh/http.py",
+     'numbers = {m.lstrip("0") for m in members}', "numbers = set(members)",
+     "tests.test_http.ContentLengthValues.test_05_and_5_are_the_same_number"),
+    ("an exact Content-Length is not short", "factrefresh/http.py", "got < declared)", "got <= declared)",
+     "tests.test_http.FallbackHeaders.test_digit_string_comparison_at_literal_boundaries"),
+    ("a Content-Length with more digits than the body length is short", "factrefresh/http.py",
+     "shorter = len(got) < len(declared) or (", "shorter = (",
+     "tests.test_http.FallbackHeaders.test_digit_string_comparison_at_literal_boundaries"),
+    ("204 is exempt", "factrefresh/http.py", "if status in (204, 205):", "if status in (205,):",
+     "tests.test_http.NoContentStatuses.test_204_with_a_content_length_is_not_rejected"),
+    ("205 is exempt", "factrefresh/http.py", "if status in (204, 205):", "if status in (204,):",
+     "tests.test_http.NoContentStatuses.test_205_with_a_content_length_is_not_rejected"),
+    ("other 2xx statuses are checked", "factrefresh/http.py", "if status in (204, 205):", "if status in (203, 204, 205, 206):",
+     "tests.test_http.NoContentStatuses.test_203_and_206_are_still_checked"),
+    ("the fallback recognises exactly chunked", "factrefresh/http.py",
+     'chunked = hdrs.get("transfer-encoding", "").strip().lower() == "chunked"', "chunked = False",
+     "tests.test_http.FallbackHeaders.test_exactly_chunked_skips_the_check"),
+    ("the fallback reads Content-Length from plain headers", "factrefresh/http.py",
+     'raw = [hdrs["content-length"]] if "content-length" in hdrs else []', "raw = []",
+     "tests.test_http.FallbackHeaders.test_a_short_body_is_cut_off"),
+    ("conflicting Content-Length headers are a transport error", "factrefresh/http.py",
+     "if len(numbers) > 1:", "if False:",
+     "tests.test_http.ContentLength.test_conflicting_content_length_headers_are_a_transport_error"),
+    ("only ASCII digits count as a Content-Length", "factrefresh/http.py",
+     '_DIGITS = re.compile(r"[0-9]+")', '_DIGITS = re.compile(r"\\d+")',
+     "tests.test_http.FallbackHeaders.test_a_content_length_of_non_ascii_digits_is_malformed"),
+    ("a Content-Length that is not plain digits is a transport error", "factrefresh/http.py",
+     "if not all(_DIGITS.fullmatch(m) for m in members):", "if False:",
+     "tests.test_http.ContentLength.test_a_content_length_that_is_not_plain_digits_is_a_transport_error"),
+    ("a URL of 2001 characters is not plain", R,
+     "return len(url) <= URL_MAX_LENGTH and URL_RE.fullmatch(url) is not None",
+     "return len(url) <= URL_MAX_LENGTH + 1 and URL_RE.fullmatch(url) is not None",
+     f"{T}.SchemaUrl.test_a_url_one_character_over_the_schema_length_is_not_plain"),
+    ("a robots.txt redirect target must be a plain https URL", R,
+     "if plain_url(target) else None", "if True else None",
+     f"{T}.SchemaUrl.test_a_robots_txt_redirect_to_a_url_that_is_not_plain_https_is_not_followed"),
+    ("a stall late in the budget waits only for the time left", "factrefresh/http.py",
+     "self._sock.settimeout(left)", "pass",
+     "tests.test_http.Gaps.test_a_stall_late_in_the_budget_waits_only_for_the_time_left"),
+    ("a mid-body timeout is a transport error", "factrefresh/http.py",
+     "except (socket.timeout, ConnectionError, OSError) as err:", "except ConnectionError as err:",
+     "tests.test_http.Gaps.test_a_timeout_in_the_middle_of_the_body_is_a_transport_error"),
+    ("a mid-body OSError is a transport error", "factrefresh/http.py",
+     "except (socket.timeout, ConnectionError, OSError) as err:", "except (socket.timeout, ConnectionError) as err:",
+     "tests.test_http.Gaps.test_an_os_error_in_the_middle_of_the_body_is_a_transport_error"),
 ]
 
 
 def main() -> int:
     failed = []
-    for what, path, code, mutant, test in GUARDS:
+    skipped = 0
+    for row in GUARDS:
+        what, path, code, mutant, test = row[:5]
+        needs = row[5] if len(row) > 5 else None
+        if needs and sys.version_info < needs:
+            print(f"skip {what}: needs Python {needs[0]}.{needs[1]}+ (CI runs it)")
+            skipped += 1
+            continue
         with tempfile.TemporaryDirectory() as tmp:
             for d in ("factrefresh", "tests"):
                 shutil.copytree(os.path.join(ROOT, d), os.path.join(tmp, d),
@@ -192,7 +282,8 @@ def main() -> int:
                 print(f"ok   {what}")
     for f in failed:
         print(f"FAIL {f}")
-    print(f"{len(GUARDS) - len(failed)} of {len(GUARDS)} guards are tested")
+    print(f"{len(GUARDS) - len(failed) - skipped} of {len(GUARDS)} guards are tested"
+          + (f"; {skipped} skipped on this Python" if skipped else ""))
     return 1 if failed else 0
 
 

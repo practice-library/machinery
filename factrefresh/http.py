@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import http.client
 import io
+import re
 import socket
 import time
 import urllib.error
@@ -62,8 +63,49 @@ class UrllibTransport:
         finally:
             resp.close()
         hdrs = {k.lower(): v for k, v in (resp.headers.items() if resp.headers else [])}
-        return Response(status=resp.status if hasattr(resp, "status") else resp.code,
-                        headers=hdrs, body=body[:max_bytes], truncated=len(body) > max_bytes)
+        status = resp.status if hasattr(resp, "status") else resp.code
+        if 200 <= status < 300:
+            self._check_length(resp, status, hdrs, body, max_bytes)
+        return Response(status=status, headers=hdrs, body=body[:max_bytes], truncated=len(body) > max_bytes)
+
+    @staticmethod
+    def _check_length(resp, status: int, hdrs: Dict[str, str], body: bytes, max_bytes: int) -> None:
+        """A 2xx page must be whole before its quote is looked for, so it can never read as `changed` when it
+        was only cut off. http.client's read1 returns a short body without an error, so the body read is
+        compared with Content-Length here.
+
+        Exempt: 204 and 205 (no content by definition), a chunked body (http.client reads it by its chunks
+        and ignores Content-Length) and a body we cut ourselves at maxBytes (reported as truncated).
+        Content-Length may be repeated, or a comma-separated list, as long as every member is the same
+        number (RFC 9110, 8.6); members that disagree, or a member that is not plain ASCII digits, are a
+        transport error rather than a reason to skip the check. Numbers are compared as digit strings,
+        never converted, so no length of header can raise."""
+        if status in (204, 205):
+            return
+        chunked = getattr(resp, "chunked", None)
+        if chunked is None:  # not an http.client response: the rule http.client itself uses
+            chunked = hdrs.get("transfer-encoding", "").strip().lower() == "chunked"
+        if chunked:
+            return  # http.client reads a chunked body by its chunks and ignores Content-Length
+        get_all = getattr(resp.headers, "get_all", None)
+        if get_all is not None:
+            raw = list(get_all("content-length") or [])
+        else:
+            raw = [hdrs["content-length"]] if "content-length" in hdrs else []
+        if not raw:
+            return
+        members = [m.strip() for v in raw for m in v.split(",")]
+        if not all(_DIGITS.fullmatch(m) for m in members):
+            raise TransportError(f"malformed Content-Length {', '.join(raw)[:40]!r}")
+        numbers = {m.lstrip("0") for m in members}  # "" stands for zero
+        if len(numbers) > 1:
+            raise TransportError(f"conflicting Content-Length values: {', '.join(raw)[:80]}")
+        declared = numbers.pop()
+        got = str(len(body))
+        shorter = len(got) < len(declared) or (len(got) == len(declared) and got < declared)
+        if len(body) <= max_bytes and shorter:
+            shown = declared if len(declared) <= 20 else declared[:20] + "..."
+            raise TransportError(f"the body ended after {len(body)} of the {shown} bytes Content-Length declares")
 
     def _read(self, resp, limit: int, deadline: float, timeout: float) -> bytes:
         read = getattr(resp, "read1", None) or resp.read
@@ -82,6 +124,7 @@ class UrllibTransport:
 
 
 CHUNK = 65536
+_DIGITS = re.compile(r"[0-9]+")  # ASCII digits only: no sign, no space, no comma list
 
 
 class _DeadlineSocket:
