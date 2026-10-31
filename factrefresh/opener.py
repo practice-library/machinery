@@ -26,6 +26,22 @@ from typing import Dict, List, Optional, Tuple
 
 BRANCH_ROOT = "fact-refresh"
 _DATE_LINE = re.compile(r'^\s*"(measuredAt|fetched_at)": "[^"]*",?$')
+MAX_OPEN_PULL_REQUESTS = 3  # open fact-refresh/ pull requests, across every graph
+
+
+def code(text: str, table: bool = False) -> str:
+    """Report text, fenced as one inline code span: it cannot close the span, start a line, mention
+    anyone or link anywhere. In a table cell a pipe is escaped too."""
+    flat = " ".join(str(text).split()).replace("`", "'")
+    if table:
+        flat = flat.replace("|", "\\|")
+    return f"`{flat}`"
+
+
+def no_mentions(body: str) -> str:
+    """Every @ outside a code span becomes &#64;, so no body posted by the opener notifies anyone."""
+    parts = body.split("`")
+    return "`".join(p.replace("@", "&#64;") if i % 2 == 0 else p for i, p in enumerate(parts))
 
 
 # -- data the opener acts on ---------------------------------------------------------------------------------
@@ -123,11 +139,11 @@ def plan_graph(graph: str, history: List[dict], repo: Repo, main: str, runs_befo
     run_line = f"Refresh run [{run['id']}]({run['url']}) read `{graph}` at {commit}."
 
     if "aborted" in latest:
-        hosts = ", ".join(r["host"] for r in latest["robots"] if r["verdict"] in ("disallowed", "unreachable"))
+        hosts = ", ".join(code(r["host"]) for r in latest["robots"] if r["verdict"] in ("disallowed", "unreachable"))
         plan.actions.append(Issue(
             label="robots", title=f"robots: {graph}", run_url=run["url"],
             body=f"The refresh of `{graph}` stopped before fetching any page.\n\n- Host: {hosts}\n"
-                 f"- Reason: {latest['aborted']['reason']}\n\n{run_line}\n"))
+                 f"- Reason: {code(latest['aborted']['reason'])}\n\n{run_line}\n"))
         return plan
 
     def node_path(node_id: str) -> str:
@@ -160,8 +176,8 @@ def plan_graph(graph: str, history: List[dict], repo: Repo, main: str, runs_befo
             plan.notes.append(f"{r['node']}: the bump would change more than the two date lines; no bump")
             continue
         files[path] = new
-        note = f" ({r['reason']})" if r.get("reason") else ""
-        rows.append(f"| `{r['node']}` | {old} | {r['fetchedAt']} |{note}")
+        note = f" {code(r['reason'], table=True)}" if r.get("reason") else ""
+        rows.append(f"| `{r['node']}` | {old} | {r['fetchedAt']} |{note} |")
     if files:
         prefix = f"{BRANCH_ROOT}/{slug(graph)}/bump-"
         plan.actions.append(PullRequest(
@@ -170,7 +186,7 @@ def plan_graph(graph: str, history: List[dict], repo: Repo, main: str, runs_befo
             message=f"{graph}: bump measuredAt and fetched_at of {len(files)} facts\n\n"
                     f"Their quotes are still on their source pages (refresh run {run['id']}).\n",
             body="Every quote below is still on its source page, so only `measuredAt` and `attrs.fetched_at` "
-                 "change.\n\n| Fact | Old fetched_at | New fetched_at |\n|---|---|---|\n"
+                 "change.\n\n| Fact | Old fetched_at | New fetched_at | Note |\n|---|---|---|---|\n"
                  + "\n".join(rows) + f"\n\n{run_line}\n",
             files=files))
 
@@ -187,7 +203,7 @@ def plan_graph(graph: str, history: List[dict], repo: Repo, main: str, runs_befo
         current = repo.show(main, changes_path) or f"# Changes to {graph}\n\n"
         if not current.endswith("\n"):
             current += "\n"
-        line = (f"- {r['fetchedAt'][:10]} `{r['node']}`: the quote is no longer on {r['finalUrl']} "
+        line = (f"- {r['fetchedAt'][:10]} `{r['node']}`: the quote is no longer on {code(r['finalUrl'])} "
                 f"(last confirmed {old}, read {r['fetchedAt']}, run {run['url']}).\n")
         prefix = f"{BRANCH_ROOT}/{slug(graph)}/changed-{r['node']}-"
         plan.actions.append(PullRequest(
@@ -197,9 +213,9 @@ def plan_graph(graph: str, history: List[dict], repo: Repo, main: str, runs_befo
             body=f"The refresh read the source of `{r['node']}` and the stored quote is not in its text. "
                  f"This records the finding in `{changes_path}` and does not touch the node; the corrected "
                  f"node is pushed to this branch.\n\n"
-                 f"- Source: {r['source']}\n- Read from: {r['finalUrl']} (HTTP {r['httpStatus']}, "
+                 f"- Source: {code(r['source'])}\n- Read from: {code(r['finalUrl'])} (HTTP {r['httpStatus']}, "
                  f"text sha256 `{r['sha256']}`)\n- Old fetched_at: {old}\n- New fetched_at: {r['fetchedAt']}\n"
-                 f"- Reason: {r['reason']}\n\n{run_line}\n",
+                 f"- Reason: {code(r['reason'])}\n\n{run_line}\n",
             files={changes_path: current + line}))
 
     # unreadable: an issue once the streak is long enough
@@ -210,12 +226,12 @@ def plan_graph(graph: str, history: List[dict], repo: Repo, main: str, runs_befo
         if len(streak) < runs_before_issue:
             plan.notes.append(f"{r['node']}: unreadable in {len(streak)} of the last {runs_before_issue} reports; no issue yet")
             continue
-        lines = "\n".join(f"- run [{rep['run']['id']}]({rep['run']['url']}) at {hit['fetchedAt']}: {hit['reason']}"
+        lines = "\n".join(f"- run [{rep['run']['id']}]({rep['run']['url']}) at {hit['fetchedAt']}: {code(hit['reason'])}"
                           for rep, hit in streak[:runs_before_issue])
         plan.actions.append(Issue(
             label="unreadable-source", title=f"unreadable-source: {r['node']}", run_url=run["url"],
             body=f"The source of `{r['node']}` in `{graph}` could not be read in the last {runs_before_issue} "
-                 f"refresh runs.\n\n- Source: {r['source']}\n{lines}\n"))
+                 f"refresh runs.\n\n- Source: {code(r['source'])}\n{lines}\n"))
     return plan
 
 
@@ -280,7 +296,11 @@ def _apply_pr(pr: PullRequest, gh, repo: Repo, main: str, open_heads: List[str],
     ever = gh.api("GET", f"repos/{gh.repo}/pulls?state=all&head={gh.owner}:{pr.branch}&per_page=100")
     if ever:
         return f"skip {pr.branch}: pull request #{ever[0]['number']} was already opened from it"
+    ours = [h for h in open_heads if h.startswith(BRANCH_ROOT + "/")]
+    if len(ours) >= MAX_OPEN_PULL_REQUESTS:
+        return f"skip {pr.branch}: {len(ours)} {BRANCH_ROOT}/ pull requests are open, the most allowed at once"
     if dry_run:
+        open_heads.append(pr.branch)
         return f"would open {pr.branch}: {pr.title} ({len(pr.files)} files)"
     ref = gh.api("GET", f"repos/{gh.repo}/git/ref/heads/{pr.branch}", ok404=True)
     if ref is None:  # a branch left by an interrupted earlier run is reused as it is
@@ -291,7 +311,7 @@ def _apply_pr(pr: PullRequest, gh, repo: Repo, main: str, open_heads: List[str],
                         {"message": pr.message, "tree": tree["sha"], "parents": [main]})
         gh.api("POST", f"repos/{gh.repo}/git/refs", {"ref": f"refs/heads/{pr.branch}", "sha": commit["sha"]})
     made = gh.api("POST", f"repos/{gh.repo}/pulls",
-                  {"title": pr.title, "head": pr.branch, "base": "main", "body": pr.body})
+                  {"title": pr.title, "head": pr.branch, "base": "main", "body": no_mentions(pr.body)})
     open_heads.append(pr.branch)
     return f"opened #{made['number']} from {pr.branch}"
 
@@ -303,17 +323,17 @@ def _apply_issue(issue: Issue, gh, dry_run: bool) -> str:
         num = found[0]["number"]
         said = [found[0].get("body") or ""] + [c.get("body") or "" for c in
                                                 gh.api("GET", f"repos/{gh.repo}/issues/{num}/comments?per_page=100")]
-        if any(issue.run_url in s for s in said):
+        if any(issue.run_url in s or no_mentions(issue.run_url) in s for s in said):
             return f"skip issue #{num}: already has {issue.run_url}"
         if dry_run:
             return f"would comment on #{num}"
-        gh.api("POST", f"repos/{gh.repo}/issues/{num}/comments", {"body": issue.body})
+        gh.api("POST", f"repos/{gh.repo}/issues/{num}/comments", {"body": no_mentions(issue.body)})
         return f"commented on #{num}"
     if dry_run:
         return f"would open issue: {issue.title}"
     if gh.api("GET", f"repos/{gh.repo}/labels/{issue.label}", ok404=True) is None:
         gh.api("POST", f"repos/{gh.repo}/labels", {"name": issue.label, "color": "d93f0b"})
-    made = gh.api("POST", f"repos/{gh.repo}/issues", {"title": issue.title, "body": issue.body, "labels": [issue.label]})
+    made = gh.api("POST", f"repos/{gh.repo}/issues", {"title": issue.title, "body": no_mentions(issue.body), "labels": [issue.label]})
     return f"opened issue #{made['number']}: {issue.title}"
 
 

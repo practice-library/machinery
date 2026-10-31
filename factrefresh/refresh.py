@@ -27,11 +27,12 @@ from urllib.parse import urljoin, urlsplit
 from . import robots as robotstxt
 from .graphs import Host, Policy, load_nodes
 from .http import Response, TransportError
-from .text import has_quote, page_text
+from .text import has_quote, page_text, quote_is_empty
 
 REDIRECTS = (301, 302, 303, 307, 308)
 MAX_HOPS = 5
 DEFAULT_PACE_SECONDS = 2.0
+MIN_PAGES_FOR_HOST_VERDICT = 2  # pages of one host that must all miss their quote before the host is distrusted
 # The url pattern of spec/refresh-report: lower-case host, printable ASCII path.
 URL_RE = re.compile(r"^https://[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+(/[!-~]*)?$")
 TEXT_TYPES = ("application/json", "application/xhtml+xml", "application/xml")
@@ -258,6 +259,7 @@ class Refresher:
         else:
             pages: Dict[str, Page] = {}
             stopped: Dict[str, Page] = {}
+            read: List[Tuple[str, str, dict]] = []  # (host, source, result)
             for node, host in due:
                 if host.host not in rules:
                     continue
@@ -271,11 +273,29 @@ class Refresher:
                             break  # the rest waits for the next run
                         continue  # this host's cap: its other facts wait too
                     pages[src] = page
-                results.append(self._result(node, page))
+                read.append((host.host, src, self._result(node, page)))
+            results += self._distrust_hosts_where_every_quote_failed(read)
             report["results"] = sorted(results, key=lambda r: r["node"])
         report["requests"] = self.graph_requests
         report["run"]["finishedAt"] = stamp(self.clock.now())
         return report
+
+    @staticmethod
+    def _distrust_hosts_where_every_quote_failed(read: List[Tuple[str, str, dict]]) -> List[dict]:
+        """A host that answered 200 for at least MIN_PAGES_FOR_HOST_VERDICT pages without one quote on any of
+        them is most likely serving a challenge or error page, not changed facts: its `changed` results become
+        `unreadable`, so they never become one pull request per fact."""
+        hosts = sorted({h for h, _, _ in read})
+        for host in hosts:
+            mine = [(src, r) for h, src, r in read if h == host and r["outcome"] in ("changed", "unchanged")]
+            pages = {src for src, _ in mine}
+            if len(pages) < MIN_PAGES_FOR_HOST_VERDICT or any(r["outcome"] == "unchanged" for _, r in mine):
+                continue
+            for _, r in mine:
+                r["outcome"] = "unreadable"
+                r["reason"] = (f"blocked: no quote was found on any of the {len(pages)} pages read from {host}, "
+                               f"which looks like a challenge or error page, not a verdict")
+        return [r for _, _, r in read]
 
     @staticmethod
     def _result(node: dict, page: Page) -> dict:
@@ -292,6 +312,10 @@ class Refresher:
                 r["retryAfterSeconds"] = page.retry_after
             return r
         r["sha256"] = hashlib.sha256(page.text.encode("utf-8")).hexdigest()
+        if quote_is_empty(node["attrs"]["quote"]):
+            r["outcome"] = "unreadable"
+            r["reason"] = "unreadable: the stored quote is empty, so nothing can be confirmed"
+            return r
         if has_quote(page.text, node["attrs"]["quote"]):
             r["outcome"] = "unchanged"
             if page.final_url != node["source"]:

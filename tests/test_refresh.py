@@ -184,6 +184,97 @@ class Unreachable(unittest.TestCase):
         self.assertEqual(by_node(run(recorded=rec)[0])["plan.example.free"]["outcome"], "unreadable")
 
 
+class Rework(unittest.TestCase):
+    def test_an_empty_stored_quote_is_unreadable_never_unchanged(self):
+        with GraphsCopy() as root:
+            path = os.path.join(root, "vendors/example/graph/nodes/limit.example.burst.json")
+            with open(path, encoding="utf-8") as f:
+                node = json.load(f)
+            node["attrs"]["quote"] = "   "
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(node, f)
+            r = by_node(run(root=root)[0])["limit.example.burst"]
+        self.assertEqual(r["outcome"], "unreadable")
+        self.assertIn("empty", r["reason"])
+
+    def test_a_host_where_every_quote_fails_is_distrusted(self):
+        rec = exchanges()
+        page = {"status": 200, "headers": {"content-type": "text/html"}, "file": "challenge.html"}
+        rec["https://docs.example.com/limits"] = [dict(page)]
+        rec["https://docs.example.com/plans"] = [dict(page)]
+        report, _, _ = run(recorded=rec)
+        r = by_node(report)
+        for node in ("limit.example.burst", "rule.example.fair-use", "plan.example.free"):
+            self.assertEqual(r[node]["outcome"], "unreadable", node)
+            self.assertTrue(r[node]["reason"].startswith("blocked:"), node)
+        self.assertFalse([x for x in report["results"] if x["outcome"] == "changed"])
+        self.assertEqual(r["term.example.support"]["outcome"], "unchanged")  # another host is judged on its own
+
+    def test_a_redirect_robots_txt_disallows_is_not_followed(self):
+        rec = exchanges()
+        rec["https://docs.example.com/limits"] = [{"status": 302, "headers": {"location": "/private/limits"}}]
+        rec["https://docs.example.com/private/limits"] = [
+            {"status": 200, "headers": {"content-type": "text/html"}, "file": "limits.html"}]
+        report, t, _ = run(recorded=rec)
+        self.assertNotIn("https://docs.example.com/private/limits", t.urls())
+        r = by_node(report)["limit.example.burst"]
+        self.assertEqual(r["outcome"], "unreadable")
+        self.assertIn("disallows", r["reason"])
+
+    def test_a_redirect_to_a_listed_host_whose_robots_txt_was_not_read_is_not_followed(self):
+        rec = exchanges()
+        rec["https://docs.example.com/limits"] = [{"status": 302, "headers": {"location": "https://status.example.com/limits"}}]
+        report, t, _ = run(recorded=rec)
+        self.assertFalse([u for u in t.urls() if "status.example.com" in u])
+        r = by_node(report)["limit.example.burst"]
+        self.assertEqual(r["outcome"], "unreadable")
+        self.assertIn("was not read", r["reason"])
+
+    def test_a_redirect_to_a_url_that_is_not_plain_https_is_not_followed(self):
+        rec = exchanges()
+        rec["https://docs.example.com/limits"] = [{"status": 302, "headers": {"location": "http://docs.example.com/limits"}}]
+        rec["http://docs.example.com/limits"] = [{"status": 200, "headers": {"content-type": "text/html"}, "file": "limits.html"}]
+        report, t, _ = run(recorded=rec)
+        self.assertNotIn("http://docs.example.com/limits", t.urls())
+        self.assertIn("not a plain https URL", by_node(report)["limit.example.burst"]["reason"])
+
+    def test_a_robots_txt_redirect_to_an_unlisted_host_is_not_followed(self):
+        rec = exchanges()
+        rec["https://docs.example.com/robots.txt"] = [{"status": 301, "headers": {"location": "https://evil.example.net/robots.txt"}}]
+        rec["https://evil.example.net/robots.txt"] = [{"status": 200, "body": "User-agent: *\nAllow: /\n"}]
+        report, t, _ = run(recorded=rec)
+        self.assertNotIn("https://evil.example.net/robots.txt", t.urls())
+        self.assertIn("aborted", report)
+        self.assertEqual(report["robots"][0]["verdict"], "unreachable")
+
+    def test_a_robots_txt_redirect_on_the_same_host_is_followed(self):
+        rec = exchanges()
+        rec["https://docs.example.com/robots.txt"] = [{"status": 301, "headers": {"location": "/robots-v2.txt"}}]
+        rec["https://docs.example.com/robots-v2.txt"] = [{"status": 200, "file": "robots-allow.txt"}]
+        report, _, _ = run(recorded=rec)
+        self.assertNotIn("aborted", report)
+        self.assertEqual(report["robots"][0]["verdict"], "allowed")
+
+    def test_redirects_stop_after_max_hops(self):
+        rec = exchanges()
+        chain = ["https://docs.example.com/limits"] + [f"https://docs.example.com/hop{i}" for i in range(1, 9)]
+        for here, there in zip(chain, chain[1:]):
+            rec[here] = [{"status": 301, "headers": {"location": there}}]
+        report, t, _ = run(recorded=rec)
+        self.assertEqual(sum(1 for u in t.urls() if u in chain), 6)  # the first request and five redirects
+        self.assertIn("more than 5 redirects", by_node(report)["limit.example.burst"]["reason"])
+
+    def test_retry_after_as_an_http_date_is_honoured(self):
+        rec = exchanges()
+        rec["https://docs.example.com/plans"] = [
+            {"status": 429, "headers": {"retry-after": "Sat, 31 Oct 2026 12:00:40 GMT"}},
+            {"status": 200, "headers": {"content-type": "text/html"}, "file": "plans.html"}]
+        report, t, clock = run(recorded=rec)
+        self.assertEqual(t.urls().count("https://docs.example.com/plans"), 2)
+        self.assertTrue(any(30 <= s <= 40 for s in clock.slept), clock.slept)
+        self.assertEqual(by_node(report)["plan.example.free"]["outcome"], "changed")
+
+
 class Pacing(unittest.TestCase):
     def test_every_request_sends_the_listed_user_agent(self):
         _, t, _ = run()

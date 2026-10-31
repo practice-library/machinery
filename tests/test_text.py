@@ -51,3 +51,30 @@ class Robots(unittest.TestCase):
 
     def test_empty_disallow_allows_everything(self):
         self.assertTrue(robots.parse("User-agent: *\nDisallow:\n", UA).allows("https://h.example.com/x"))
+
+
+class WholeQuote(unittest.TestCase):
+    def test_a_quote_ending_in_a_digit_does_not_match_a_longer_number(self):
+        self.assertFalse(has_quote("It costs $100 a month.", "$10"))
+        self.assertTrue(has_quote("It costs $10 a month.", "$10"))
+
+    def test_a_quote_starting_in_a_digit_does_not_match_inside_a_grouped_number(self):
+        self.assertFalse(has_quote("Up to 1,000 per month.", "000 per month"))
+        self.assertFalse(has_quote("Version 2.5 ships.", "5 ships"))
+        self.assertTrue(has_quote("Up to 1,000 per month.", "1,000 per month"))
+
+    def test_a_word_is_not_matched_inside_a_longer_word(self):
+        self.assertFalse(has_quote("The limits are unlimited.", "limited."))
+        self.assertTrue(has_quote("Requests are limited.", "limited."))
+
+    def test_a_later_whole_match_counts_after_an_inner_one(self):
+        self.assertTrue(has_quote("$100 or $10 a month", "$10"))
+
+    def test_an_empty_or_blank_quote_is_never_found(self):
+        self.assertFalse(has_quote("anything", ""))
+        self.assertFalse(has_quote("anything", " \n\t "))
+
+    def test_table_cells_separate_words(self):
+        text = page_text("<table><tr><td>20</td><td>requests</td></tr></table>", "html")
+        self.assertTrue(has_quote(text, "20 requests"))
+        self.assertFalse(has_quote(text, "20requests"))

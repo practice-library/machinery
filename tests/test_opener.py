@@ -213,5 +213,60 @@ class Applying(unittest.TestCase):
         self.assertEqual(made[0][2]["labels"], ["robots"])
 
 
+
+def outside_code(body):
+    """The parts of a markdown body that are not inside an inline code span."""
+    return "".join(p for i, p in enumerate(body.split("`")) if i % 2 == 0)
+
+
+class Rework(unittest.TestCase):
+    def test_a_fact_whose_source_differs_from_the_report_is_not_bumped(self):
+        rep = golden()
+        for r in rep["results"]:
+            if r["node"] == "limit.example.burst":
+                r["source"] = "https://docs.example.com/limits-old"
+        bump = [p for p in prs(opener.plan_all([rep], FakeRepo(), MAIN, 3)) if "/bump-" in p.branch][0]
+        self.assertNotIn(f"{GRAPH}/graph/nodes/limit.example.burst.json", bump.files)
+        self.assertIn(f"{GRAPH}/graph/nodes/rule.example.fair-use.json", bump.files)
+
+    def test_no_more_than_three_refresh_pull_requests_are_open_at_once(self):
+        rep = golden()
+        extra = [dict(r) for r in rep["results"] if r["outcome"] == "changed"][0]
+        for node in ("limit.example.burst", "rule.example.fair-use", "term.example.support"):
+            rep["results"] = [r for r in rep["results"] if r["node"] != node] + [dict(extra, node=node)]
+        plan = opener.plan_all([rep], FakeRepo(), MAIN, 3)
+        self.assertEqual(len(prs(plan)), 4)
+        gh = FakeGh(open_prs=["unrelated-branch"])
+        out = opener.apply(plan, gh, FakeRepo(), MAIN, dry_run=False)
+        self.assertEqual(len([w for w in gh.writes if w[1].endswith("/pulls")]), 3)
+        self.assertTrue(out[-1].startswith("skip") and "most allowed" in out[-1])
+        gh = FakeGh(open_prs=["fact-refresh/vendors-other/bump-1", "fact-refresh/vendors-other/bump-2",
+                              "fact-refresh/vendors-other/bump-3"])
+        opener.apply(plan, gh, FakeRepo(), MAIN, dry_run=False)
+        self.assertEqual(gh.writes, [])
+
+    def test_report_text_stays_inside_its_code_span(self):
+        rep = golden()
+        for r in rep["results"]:
+            if r["outcome"] == "changed":
+                r["reason"] = "quote-gone: x` then\n- [click](https://bad.example.net) @maintainers"
+        changed = [p for p in prs(opener.plan_all([rep], FakeRepo(), MAIN, 3)) if "/changed-" in p.branch][0]
+        self.assertNotIn("[click]", outside_code(changed.body))
+        self.assertNotIn("@maintainers", outside_code(changed.body))
+        self.assertNotIn("\n- [click]", changed.body)
+
+    def test_no_posted_body_mentions_anyone(self):
+        run_url = "https://github.com/practice-library/machinery/actions/runs/7/@practice-library/maintainers"
+        rep = report(7, golden()["results"])
+        rep["run"]["url"] = run_url
+        plan = opener.plan_all([rep], FakeRepo(), MAIN, 3)
+        plan.actions.append(opener.Issue("robots", "robots: vendors/example", f"see {run_url}", run_url))
+        gh = FakeGh()
+        opener.apply(plan, gh, FakeRepo(), MAIN, dry_run=False)
+        bodies = [w[2]["body"] for w in gh.writes if w[2] and "body" in w[2]]
+        self.assertEqual(len(bodies), 3)
+        for body in bodies:
+            self.assertNotIn("@", outside_code(body))
+
 if __name__ == "__main__":
     unittest.main()

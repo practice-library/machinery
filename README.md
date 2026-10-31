@@ -19,7 +19,8 @@ For each graph, facts are due when their `measuredAt` is at least the host's `mi
 2. **Only listed hosts.** A source whose host is not listed for the graph's vendor is reported and never fetched. Redirects are followed only to listed hosts whose robots.txt was read and allows the target.
 3. **Paced and capped.** Requests are sequential, so there is one connection per host. Two requests to one host are at least 2 seconds apart (`--pace`), and every request sends the listed user agent. The run-wide `maxRequestsPerRun` (robots.txt included, shared by every graph) and each host's own cap, `maxBytes` and `timeoutSeconds` apply. Facts sharing a source share one request. Facts not reached wait for the next run.
 4. **429 and 503.** When `Retry-After` is at most `retryAfterMaxSeconds`, the run waits and retries once. Otherwise, or when the retry fails, the host is stopped for the run and its remaining facts are `unreadable`.
-5. **Outcomes.** The quote is matched exactly in the page's visible text, with whitespace runs collapsed: `unchanged` when it is there, `changed` when the page was read and it is not, `unreadable` otherwise. A 429 or 5xx is never a verdict.
+5. **Outcomes.** The quote is matched exactly in the page's visible text, with whitespace runs collapsed, and only as a whole. A letter or digit at either edge of the quote must not continue into the page text, so `$10` is not found in `$100` and `000 per month` is not found in `1,000 per month`. The outcome is `unchanged` when the quote is there, `changed` when the page was read and it is not, and `unreadable` otherwise. An empty or blank stored quote is `unreadable`. A 429 or 5xx is never a verdict.
+6. **Distrusted hosts.** When at least two pages from one host were read and none of their quotes was found, the host is most likely serving a challenge or error page. Its facts become `unreadable` (`blocked:`) rather than one `changed` pull request each.
 
 `reason` starts with a finer category:
 
@@ -28,8 +29,8 @@ For each graph, facts are due when their `measuredAt` is at least the host's `mi
 | `quote-moved:` | unchanged | the source redirects; the quote is on the page it ends at |
 | `quote-gone:` | changed | the page was read; the quote is not in its text |
 | `unreachable:` | unreadable | HTTP error, 429/503, timeout or network error |
-| `blocked:` | unreadable, or `aborted` | host not listed, redirect off the list, or robots.txt disallows |
-| `unreadable:` | unreadable | larger than `maxBytes`, or not text |
+| `blocked:` | unreadable, or `aborted` | host not listed, redirect off the list, robots.txt disallows, or no quote found on any page of the host |
+| `unreadable:` | unreadable | larger than `maxBytes`, not text, or the stored quote is empty |
 
 With the same checkout and the same responses the report is the same, byte for byte (results sorted by node).
 
@@ -49,6 +50,8 @@ bin/fact-refresh open --reports reports --graphs ../graphs --graphs-repo practic
 - **`changed`**: one pull request per fact, adding a line to `<domain>/<vendor>/CHANGES.md` and not touching the node, so a maintainer reviews it.
 - **`unreadable`**: an issue labelled `unreadable-source` once the fact is unreadable in each of the last `unreadableRunsBeforeIssue` reports; if one is already open, it gets a comment instead.
 - **`aborted`**: an issue labelled `robots` naming the host and the reason; if one is already open, it gets a comment instead.
+
+At most three `fact-refresh/` pull requests are open at once; the rest wait for a later run. Report text (reasons, URLs, hosts) is fenced in code spans in every body, and any other `@` is escaped, so no body mentions anyone.
 
 Reruns do not duplicate anything. A branch is named after the run (`fact-refresh/<domain>-<vendor>/bump-<run>`, `.../changed-<node>-<run>`). No pull request is opened while one for the same graph's bump, or the same fact, is open, or once one was opened from that branch. An issue gets at most one comment per run.
 

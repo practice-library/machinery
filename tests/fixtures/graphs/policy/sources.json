@@ -7,8 +7,16 @@
     {
       "host": "docs.example.com",
       "vendor": "example",
-      "robots": {"url": "https://docs.example.com/robots.txt", "checkedAt": "2026-10-01T00:00:00Z", "verdict": "allowed"},
-      "terms": {"url": "https://docs.example.com/terms", "checkedAt": "2026-10-01T00:00:00Z", "quote": "Automated reading is permitted at a modest rate."},
+      "robots": {
+        "url": "https://docs.example.com/robots.txt",
+        "checkedAt": "2026-10-01T00:00:00Z",
+        "verdict": "allowed"
+      },
+      "terms": {
+        "url": "https://docs.example.com/terms",
+        "checkedAt": "2026-10-01T00:00:00Z",
+        "quote": "Automated reading is permitted at a modest rate."
+      },
       "format": "html",
       "maxRequestsPerRun": 20,
       "minIntervalDays": 7,
@@ -18,8 +26,16 @@
     {
       "host": "help.example.com",
       "vendor": "example",
-      "robots": {"url": "https://help.example.com/robots.txt", "checkedAt": "2026-10-01T00:00:00Z", "verdict": "absent"},
-      "terms": {"url": "https://help.example.com/terms", "checkedAt": "2026-10-01T00:00:00Z", "quote": "Automated reading is permitted at a modest rate."},
+      "robots": {
+        "url": "https://help.example.com/robots.txt",
+        "checkedAt": "2026-10-01T00:00:00Z",
+        "verdict": "absent"
+      },
+      "terms": {
+        "url": "https://help.example.com/terms",
+        "checkedAt": "2026-10-01T00:00:00Z",
+        "quote": "Automated reading is permitted at a modest rate."
+      },
       "format": "text",
       "maxRequestsPerRun": 5,
       "minIntervalDays": 7,
@@ -27,10 +43,37 @@
       "timeoutSeconds": 30
     },
     {
+      "host": "status.example.com",
+      "vendor": "example",
+      "robots": {
+        "url": "https://status.example.com/robots.txt",
+        "checkedAt": "2026-10-01T00:00:00Z",
+        "verdict": "allowed"
+      },
+      "terms": {
+        "url": "https://status.example.com/terms",
+        "checkedAt": "2026-10-01T00:00:00Z",
+        "quote": "Automated reading is permitted at a modest rate."
+      },
+      "format": "html",
+      "maxRequestsPerRun": 20,
+      "minIntervalDays": 7,
+      "maxBytes": 4096,
+      "timeoutSeconds": 30
+    },
+    {
       "host": "docs.other.example.org",
       "vendor": "other",
-      "robots": {"url": "https://docs.other.example.org/robots.txt", "checkedAt": "2026-10-01T00:00:00Z", "verdict": "allowed"},
-      "terms": {"url": "https://docs.other.example.org/terms", "checkedAt": "2026-10-01T00:00:00Z", "quote": "Automated reading is permitted at a modest rate."},
+      "robots": {
+        "url": "https://docs.other.example.org/robots.txt",
+        "checkedAt": "2026-10-01T00:00:00Z",
+        "verdict": "allowed"
+      },
+      "terms": {
+        "url": "https://docs.other.example.org/terms",
+        "checkedAt": "2026-10-01T00:00:00Z",
+        "quote": "Automated reading is permitted at a modest rate."
+      },
       "format": "html",
       "maxRequestsPerRun": 5,
       "minIntervalDays": 7,
