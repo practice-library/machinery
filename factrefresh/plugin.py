@@ -73,7 +73,7 @@ class ReplayTransport:
 
 # -- verbs ---------------------------------------------------------------------------------------------------
 JOB_SCHEMA = "https://github.com/practice-library/machinery/contract/v0/fact-refresh.schema.json"
-REPORT_SCHEMA = "https://github.com/practice-library/graphs/spec/refresh-report/schema.json"
+REPORT_SCHEMA = "https://github.com/practice-library/.github/spec/refresh-report/schema.json"
 
 
 def describe() -> Tuple[dict, list]:

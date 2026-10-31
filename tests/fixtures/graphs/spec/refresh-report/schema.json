@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/practice-library/graphs/spec/refresh-report/schema.json",
+  "$id": "https://github.com/practice-library/.github/spec/refresh-report/schema.json",
   "title": "Refresh report",
   "description": "What one scheduled refresh run found for one graph. The workflow uploads it as a run artifact named refresh-report; the PR opener on the maintainer's machine reads it and opens pull requests and issues. The workflow never pushes and holds no secret; the opener never fetches. spec/README.md states the rules the run follows.",
   "type": "object",
@@ -79,7 +79,7 @@
           "maxLength": 300
         }
       },
-      "description": "Present when the run stopped before fetching any page: a robots.txt disallows a path we fetch, or could not be read (5xx or network error, which counts as a disallow)."
+      "description": "Present when the run stopped before fetching any page: a robots.txt disallows a path we fetch, or could not be read (5xx, 429 or network error, which counts as a disallow)."
     },
     "results": {
       "type": "array",
@@ -196,7 +196,8 @@
     },
     "time": {
       "type": "string",
-      "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](\\.[0-9]{1,9})?Z$"
+      "pattern": "^(?:[0-9]{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12][0-9]|3[01])|(?:0[469]|11)-(?:0[1-9]|[12][0-9]|30)|02-(?:0[1-9]|1[0-9]|2[0-8]))|(?:[0-9]{2}(?:0[48]|[2468][048]|[13579][26])|(?:[02468][048]|[13579][26])00)-02-29)T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](\\.[0-9]{1,9})?Z$",
+      "description": "UTC, a real calendar date and time."
     },
     "robots": {
       "type": "object",
@@ -226,9 +227,53 @@
             "disallowed",
             "unreachable"
           ],
-          "description": "allowed: robots.txt permits every path the run fetches from this host. absent: robots.txt answered 4xx, so no rule applies. disallowed: a rule forbids a path we fetch. unreachable: 5xx or a network error, treated as disallowed."
+          "description": "allowed: robots.txt permits every path the run fetches from this host. absent: robots.txt answered a 4xx other than 429, so no rule applies. disallowed: a rule forbids a path we fetch. unreachable: 5xx, 429 or a network error, treated as disallowed. A 429 asks the run to slow down; it never means there is no robots.txt."
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "httpStatus"
+            ],
+            "properties": {
+              "httpStatus": {
+                "const": 429
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "verdict": {
+                "const": "unreachable"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "verdict"
+            ],
+            "properties": {
+              "verdict": {
+                "const": "absent"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "httpStatus"
+            ],
+            "properties": {
+              "httpStatus": {
+                "minimum": 400,
+                "maximum": 499
+              }
+            }
+          }
+        }
+      ]
     }
   },
   "allOf": [

@@ -1,10 +1,10 @@
 {
   "refreshReport": {
-    "repository": "practice-library/graphs",
-    "tag": null,
-    "commit": "7a773162b26550268a685fe52dd08257ef6a6a06",
+    "repository": "practice-library/.github",
+    "tag": "v2.1.0",
+    "commit": "1dd90884cca4277db278eb7d4ea17eaebf21e563",
     "path": "spec/refresh-report/schema.json",
-    "id": "https://github.com/practice-library/graphs/spec/refresh-report/schema.json",
-    "note": "The report schema a merge returns, referenced by its $id and never copied. The repository has no release tag yet, so the pin is a full commit; when a tag exists, or the schema moves to practice-library/.github, only this row changes."
+    "id": "https://github.com/practice-library/.github/spec/refresh-report/schema.json",
+    "note": "The report schema a merge returns, referenced by its $id and never copied into the contract. It lives in practice-library/.github since v2.1.0; the pin is the commit the tag names. A new release changes only this row."
   }
 }

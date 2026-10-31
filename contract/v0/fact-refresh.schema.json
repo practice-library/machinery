@@ -31,7 +31,7 @@
         "decided": {
           "type": "array",
           "description": "Results the plan decided without fetching (a source on a host not listed for the vendor), which merge puts in the report as they are.",
-          "items": {"$ref": "https://github.com/practice-library/graphs/spec/refresh-report/schema.json#/$defs/result"}
+          "items": {"$ref": "https://github.com/practice-library/.github/spec/refresh-report/schema.json#/$defs/result"}
         }
       }
     },
@@ -77,7 +77,7 @@
             "additionalProperties": false,
             "properties": {
               "node": {"type": "string", "pattern": "^[a-z][a-z0-9-]*(\\.[a-z0-9][a-z0-9-]*)+$"},
-              "source": {"$ref": "https://github.com/practice-library/graphs/spec/refresh-report/schema.json#/$defs/url"},
+              "source": {"$ref": "https://github.com/practice-library/.github/spec/refresh-report/schema.json#/$defs/url"},
               "measuredAt": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"},
               "quote": {"$ref": "#/$defs/quote"}
             }
@@ -102,13 +102,13 @@
         "requests": {"type": "integer", "minimum": 0, "maximum": 200},
         "robots": {
           "description": "robots.txt of the unit's host, read before any page; null when the budget ran out before it could be read.",
-          "oneOf": [{"type": "null"}, {"$ref": "https://github.com/practice-library/graphs/spec/refresh-report/schema.json#/$defs/robots"}]
+          "oneOf": [{"type": "null"}, {"$ref": "https://github.com/practice-library/.github/spec/refresh-report/schema.json#/$defs/robots"}]
         },
         "aborted": {
           "type": "object", "required": ["reason"], "additionalProperties": false,
           "properties": {"reason": {"type": "string", "minLength": 1, "maxLength": 300}}
         },
-        "results": {"type": "array", "items": {"$ref": "https://github.com/practice-library/graphs/spec/refresh-report/schema.json#/$defs/result"}},
+        "results": {"type": "array", "items": {"$ref": "https://github.com/practice-library/.github/spec/refresh-report/schema.json#/$defs/result"}},
         "notReached": {
           "type": "array", "uniqueItems": true,
           "description": "Facts of the unit with no result because the budget or the time cap ran out first; they wait for the next run and are left out of the report. Unless the unit aborted, results and notReached together name every fact of the unit exactly once.",
@@ -123,7 +123,7 @@
       "description": "The run verb, for a plugin that answers this job in one call instead of plan, run-unit and merge: the same input as plan."
     },
     "runData": {
-      "$ref": "https://github.com/practice-library/graphs/spec/refresh-report/schema.json",
+      "$ref": "https://github.com/practice-library/.github/spec/refresh-report/schema.json",
       "description": "The run verb's answer: the refresh report, as merge would return it."
     },
     "mergeInput": {
@@ -141,9 +141,9 @@
       "type": "object", "required": ["id", "url"], "additionalProperties": false,
       "properties": {
         "id": {"type": "integer", "minimum": 1},
-        "url": {"$ref": "https://github.com/practice-library/graphs/spec/refresh-report/schema.json#/$defs/url"}
+        "url": {"$ref": "https://github.com/practice-library/.github/spec/refresh-report/schema.json#/$defs/url"}
       }
     },
-    "time": {"$ref": "https://github.com/practice-library/graphs/spec/refresh-report/schema.json#/$defs/time"}
+    "time": {"$ref": "https://github.com/practice-library/.github/spec/refresh-report/schema.json#/$defs/time"}
   }
 }
