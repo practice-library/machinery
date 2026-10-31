@@ -147,7 +147,7 @@ class FakeServer:
         self.closed = True
 
 
-def through_urllib(chunks, per_read, timeout=3):
+def through_urllib(chunks, per_read, timeout=3, max_bytes=1000):
     """A GET through the real urllib and http.client code, with only the connected socket faked."""
     clock = [0.0]
     server = FakeServer(chunks, clock, per_read, timeout)
@@ -158,7 +158,7 @@ def through_urllib(chunks, per_read, timeout=3):
     with mock.patch.object(http.client.HTTPSConnection, "connect", connect):
         t = UrllibTransport(monotonic=lambda: clock[0])
         try:
-            return t.get("https://docs.example.com/x", {}, timeout=timeout, max_bytes=1000), server, clock
+            return t.get("https://docs.example.com/x", {}, timeout=timeout, max_bytes=max_bytes), server, clock
         except TransportError as err:
             return err, server, clock
 
@@ -211,3 +211,49 @@ class Gaps(unittest.TestCase):
                                    per_read=0.01, timeout=30)
         self.assertIsInstance(got, TransportError)
         self.assertIn("Input/output error", str(got))
+
+
+
+class ContentLength(unittest.TestCase):
+    def test_a_short_body_on_a_non_2xx_answer_is_still_returned(self):
+        got, _, _ = through_urllib([b"HTTP/1.1 404 Not Found\r\nContent-Length: 10\r\n\r\n", b"hello"], per_read=0.01)
+        self.assertNotIsInstance(got, TransportError, str(got))
+        self.assertEqual((got.status, got.body), (404, b"hello"))
+
+    def test_a_content_length_beyond_max_bytes_is_a_truncated_page_not_an_error(self):
+        got, _, _ = through_urllib([OK_HEAD + b"Content-Length: 5000\r\n\r\n", b"x" * 150], per_read=0.01,
+                                   max_bytes=100)
+        self.assertNotIsInstance(got, TransportError, str(got))
+        self.assertTrue(got.truncated)
+        self.assertEqual(len(got.body), 100)
+
+    def test_a_body_one_byte_short_is_cut_off(self):
+        got, _, _ = through_urllib([OK_HEAD + b"Content-Length: 10\r\n\r\n", b"123456789"], per_read=0.01)
+        self.assertIsInstance(got, TransportError)
+        self.assertIn("9 of the 10 bytes", str(got))
+
+    def test_a_chunked_body_ignores_a_content_length_it_does_not_match(self):
+        reply = [OK_HEAD + b"Transfer-Encoding: chunked\r\nContent-Length: 50\r\n\r\n", b"5\r\nhello\r\n0\r\n\r\n"]
+        got, _, _ = through_urllib(reply, per_read=0.01)
+        self.assertNotIsInstance(got, TransportError, str(got))
+        self.assertEqual(got.body, b"hello")
+
+    def test_conflicting_content_length_headers_are_a_transport_error(self):
+        # http.client reads by the first (5); a last-wins reading (3) would wrongly call the body whole
+        got, _, _ = through_urllib([OK_HEAD + b"Content-Length: 5\r\nContent-Length: 3\r\n\r\n", b"hello"],
+                                   per_read=0.01)
+        self.assertIsInstance(got, TransportError)
+        self.assertIn("conflicting", str(got))
+
+    def test_agreeing_duplicate_content_length_headers_are_accepted(self):
+        got, _, _ = through_urllib([OK_HEAD + b"Content-Length: 5\r\nContent-Length: 5\r\n\r\n", b"hello"],
+                                   per_read=0.01)
+        self.assertEqual(got.body, b"hello")
+
+    def test_a_content_length_that_is_not_plain_digits_is_a_transport_error(self):
+        for value in (b"+5", b"-1", b"abc", b"5, 5"):
+            with self.subTest(value=value):
+                got, _, _ = through_urllib([OK_HEAD + b"Content-Length: " + value + b"\r\n\r\n", b"hello"],
+                                           per_read=0.01)
+                self.assertIsInstance(got, TransportError)
+                self.assertIn("malformed", str(got))

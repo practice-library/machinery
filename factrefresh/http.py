@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import http.client
 import io
+import re
 import socket
 import time
 import urllib.error
@@ -63,12 +64,34 @@ class UrllibTransport:
             resp.close()
         hdrs = {k.lower(): v for k, v in (resp.headers.items() if resp.headers else [])}
         status = resp.status if hasattr(resp, "status") else resp.code
-        declared = hdrs.get("content-length", "").strip()
-        if 200 <= status < 300 and declared.isdigit() and len(body) <= max_bytes and len(body) < int(declared):
-            # The connection closed before the declared length: a cut-off page, which must never be read as
-            # a page whose quote is gone. (http.client's read1 returns the short body without an error.)
-            raise TransportError(f"the body ended after {len(body)} of the {declared} bytes Content-Length declares")
+        if 200 <= status < 300:
+            self._check_length(resp, hdrs, body, max_bytes)
         return Response(status=status, headers=hdrs, body=body[:max_bytes], truncated=len(body) > max_bytes)
+
+    @staticmethod
+    def _check_length(resp, hdrs: Dict[str, str], body: bytes, max_bytes: int) -> None:
+        """A 2xx page must be whole before its quote is looked for, so it can never read as `changed` when it
+        was only cut off. http.client's read1 returns a short body without an error, so the body read is
+        compared with Content-Length here. Exempt: a chunked body (http.client reads it by its chunks and
+        ignores Content-Length) and a body we cut ourselves at maxBytes (reported as truncated). A
+        Content-Length that is not plain digits, or duplicates that disagree, is a transport error too,
+        rather than a reason to skip the check."""
+        if "chunked" in hdrs.get("transfer-encoding", "").lower():
+            return  # http.client reads a chunked body by its chunks and ignores Content-Length
+        get_all = getattr(resp.headers, "get_all", None)
+        if get_all is not None:
+            values = [v.strip() for v in (get_all("content-length") or [])]
+        else:
+            values = [hdrs["content-length"].strip()] if "content-length" in hdrs else []
+        if not values:
+            return
+        if not all(_DIGITS.fullmatch(v) for v in values):
+            raise TransportError(f"malformed Content-Length {values[0][:40]!r}")
+        if len({int(v) for v in values}) > 1:
+            raise TransportError(f"conflicting Content-Length headers: {', '.join(values)[:80]}")
+        declared = int(values[0])
+        if len(body) <= max_bytes and len(body) < declared:
+            raise TransportError(f"the body ended after {len(body)} of the {declared} bytes Content-Length declares")
 
     def _read(self, resp, limit: int, deadline: float, timeout: float) -> bytes:
         read = getattr(resp, "read1", None) or resp.read
@@ -87,6 +110,7 @@ class UrllibTransport:
 
 
 CHUNK = 65536
+_DIGITS = re.compile(r"[0-9]+")  # ASCII digits only: no sign, no space, no comma list
 
 
 class _DeadlineSocket:
