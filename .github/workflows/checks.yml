@@ -78,6 +78,8 @@ jobs:
           echo "REPORT_SCHEMA=$schema" >> "$GITHUB_ENV"
       - name: The contract schemas are valid JSON Schema 2020-12
         run: for f in contract/v0/*.json; do jsonschema metaschema "$f"; done
+      - name: Every schema example validates, every counter-example is rejected
+        run: python3 contract/check_examples.py --validator jsonschema --report-schema "$REPORT_SCHEMA"
       - name: The Python plugin passes the conformance suite
         run: python3 conformance/run.py --plugin "$PWD/bin/fact-refresh-plugin" --report-schema "$REPORT_SCHEMA" --validator jsonschema
 

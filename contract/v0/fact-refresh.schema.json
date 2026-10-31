@@ -37,7 +37,7 @@
     },
     "unit": {
       "type": "object",
-      "description": "One independent piece of work: every due fact of one host. Units with the same shardKey never run at the same time; units with different shardKeys may.",
+      "description": "One independent piece of work: every due fact of one host. The shardKey is the host; a plan has one unit per host, so units never share one and a gateway may run any of them at once, up to maxParallel.",
       "required": ["id", "shardKey", "pacing", "budget", "host", "userAgent", "retryAfterMaxSeconds", "facts"],
       "additionalProperties": false,
       "properties": {
@@ -94,7 +94,7 @@
     },
     "partial": {
       "type": "object",
-      "required": ["unit", "shardKey", "requests", "robots", "results"],
+      "required": ["unit", "shardKey", "requests", "robots", "results", "notReached"],
       "additionalProperties": false,
       "properties": {
         "unit": {"type": "string", "pattern": "^host:[a-z0-9.-]+$"},
@@ -108,10 +108,23 @@
           "type": "object", "required": ["reason"], "additionalProperties": false,
           "properties": {"reason": {"type": "string", "minLength": 1, "maxLength": 300}}
         },
-        "results": {"type": "array", "items": {"$ref": "https://github.com/practice-library/graphs/spec/refresh-report/schema.json#/$defs/result"}}
+        "results": {"type": "array", "items": {"$ref": "https://github.com/practice-library/graphs/spec/refresh-report/schema.json#/$defs/result"}},
+        "notReached": {
+          "type": "array", "uniqueItems": true,
+          "description": "Facts of the unit with no result because the budget or the time cap ran out first; they wait for the next run and are left out of the report. Unless the unit aborted, results and notReached together name every fact of the unit exactly once.",
+          "items": {"type": "string", "pattern": "^[a-z][a-z0-9-]*(\\.[a-z0-9][a-z0-9-]*)+$"}
+        }
       },
       "if": {"required": ["aborted"]},
       "then": {"properties": {"results": {"maxItems": 0}}}
+    },
+    "runInput": {
+      "$ref": "#/$defs/planInput",
+      "description": "The run verb, for a plugin that answers this job in one call instead of plan, run-unit and merge: the same input as plan."
+    },
+    "runData": {
+      "$ref": "https://github.com/practice-library/graphs/spec/refresh-report/schema.json",
+      "description": "The run verb's answer: the refresh report, as merge would return it."
     },
     "mergeInput": {
       "type": "object",

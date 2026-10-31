@@ -11,6 +11,8 @@ contract v0 request; 3 the request's contract version is not one this plugin spe
 from __future__ import annotations
 
 import json
+import math
+import re
 import sys
 from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional, Tuple
@@ -71,7 +73,7 @@ class ReplayTransport:
 # -- verbs ---------------------------------------------------------------------------------------------------
 def describe() -> Tuple[dict, list]:
     return {
-        "name": NAME, "version": VERSION, "contracts": CONTRACTS, "job": "fact-refresh",
+        "name": NAME, "version": VERSION, "contract": CONTRACTS[0], "contracts": CONTRACTS, "job": "fact-refresh",
         "verbs": {"plan": {"shardable": False}, "run-unit": {"shardable": True}, "merge": {"shardable": False}},
     }, []
 
@@ -159,7 +161,8 @@ def run_unit(unit: dict, network: Optional[dict], caps: dict) -> Tuple[dict, lis
              for f in unit["facts"]]
     rep = refresher.refresh_nodes(nodes, "unit/unit", "unit", "0" * 40, 1, "https://example.invalid/unit")
     partial = {"unit": unit["id"], "shardKey": unit["shardKey"], "requests": rep["requests"],
-               "robots": rep["robots"][0] if rep["robots"] else None, "results": rep["results"]}
+               "robots": rep["robots"][0] if rep["robots"] else None, "results": rep["results"],
+               "notReached": [f["node"] for f in unit["facts"] if f["node"] not in {r["node"] for r in rep["results"]}]}
     if "aborted" in rep:
         partial["aborted"] = rep["aborted"]
     not_read = [{"what": node, "why": why} for _, node, why in refresher.skipped]
@@ -176,15 +179,32 @@ def merge(inp: dict) -> Tuple[dict, list]:
             raise Refused(FAILED, f"a partial result for {uid}, which is not a unit of the plan")
         if uid in got:
             raise Refused(FAILED, f"two partial results for {uid}")
-        allowed = {f["node"] for f in units[uid]["facts"]}
-        stray = [r["node"] for r in part["results"] if r["node"] not in allowed]
+        unit = units[uid]
+        if part["shardKey"] != unit["shardKey"]:
+            raise Refused(FAILED, f"the partial result for {uid} has shard key {part['shardKey'][:120]}, not {unit['shardKey']}")
+        if part["robots"] is not None and part["robots"]["host"] != unit["host"]["host"]:
+            raise Refused(FAILED, f"the partial result for {uid} has robots.txt of {part['robots']['host'][:120]}")
+        allowed = {f["node"] for f in unit["facts"]}
+        said = [r["node"] for r in part["results"]] + list(part["notReached"])
+        stray = [n for n in said if n not in allowed]
         if stray:
             raise Refused(FAILED, f"the partial result for {uid} has facts outside its unit: {', '.join(stray[:3])}")
+        if "aborted" not in part:
+            # every fact of the unit is accounted for exactly once: a result, or not reached (it waits for the next run)
+            if len(set(said)) != len(said):
+                raise Refused(FAILED, f"the partial result for {uid} names a fact twice")
+            missing = sorted(allowed - set(said))
+            if missing:
+                raise Refused(FAILED, f"the partial result for {uid} leaves out facts of its unit: {', '.join(missing[:3])}")
         got[uid] = part
     robots = sorted((part["robots"] for part in got.values() if part["robots"]), key=lambda r: r["host"])
-    aborts = [part["aborted"]["reason"] for part in got.values() if "aborted" in part]
-    aborts += [f"robots.txt of {r['host']} is {r['verdict']}" for r in robots
-               if r["verdict"] in ("disallowed", "unreachable") and not any(r["host"] in a for a in aborts)]
+    aborts = []
+    for uid in sorted(got):  # in unit order, so the report does not depend on the order of the partials
+        part = got[uid]
+        if "aborted" in part:
+            aborts.append(part["aborted"]["reason"])
+        elif part["robots"] and part["robots"]["verdict"] in ("disallowed", "unreachable"):
+            aborts.append(f"robots.txt of {part['robots']['host']} is {part['robots']['verdict']}")
     times = [p["startedAt"]] + [r["fetchedAt"] for r in robots]
     report = {"schemaVersion": 1, "graph": p["graph"], "commit": p["commit"],
               "run": {"id": p["run"]["id"], "url": p["run"]["url"], "startedAt": p["startedAt"], "finishedAt": ""},
@@ -212,19 +232,143 @@ def merge(inp: dict) -> Tuple[dict, list]:
 
 
 # -- the process boundary ------------------------------------------------------------------------------------
-def handle(request) -> Tuple[int, dict]:
+HOST = re.compile(r"[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+")
+INSTANT = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z")
+
+
+def integer(value) -> Optional[int]:
+    """A JSON Schema integer: an int that is not a bool, or a finite float with no fraction (60.0)."""
+    if type(value) is int:
+        return value
+    if type(value) is float and math.isfinite(value) and value.is_integer():
+        return int(value)
+    return None
+
+
+def bad(message: str) -> Refused:
+    return Refused(BAD_REQUEST, message)
+
+
+def check_request(request) -> None:
+    """contract/v0/request.schema.json, checked by hand: exit 3 for a well-formed version this plugin does not
+    speak, exit 2 for anything else the schema rejects."""
     if not isinstance(request, dict):
-        raise Refused(BAD_REQUEST, "the request is not a JSON object")
-    contract, verb, caps = request.get("contract"), request.get("verb"), request.get("caps")
-    if not isinstance(contract, str):
-        raise Refused(BAD_REQUEST, "the request has no contract version")
+        raise bad("the request is not a JSON object")
+    contract = request.get("contract")
+    if not isinstance(contract, str) or not re.fullmatch(r"[0-9]+", contract):
+        raise bad("the request has no contract version (digits)")
     if contract not in CONTRACTS:
         raise Refused(UNSUPPORTED, f"contract {contract[:20]} is not one this plugin speaks ({', '.join(CONTRACTS)})")
-    if not isinstance(caps, dict) or not isinstance(caps.get("timeSeconds"), int) or not isinstance(caps.get("outputBytes"), int):
-        raise Refused(BAD_REQUEST, "the request has no caps with timeSeconds and outputBytes")
-    inp = request.get("input")
-    if verb != "describe" and not isinstance(inp, dict):
-        raise Refused(BAD_REQUEST, f"{verb} needs an input object")
+    extra = sorted(set(request) - {"contract", "verb", "caps", "network", "input"})
+    if extra:
+        raise bad(f"the request has unknown keys: {', '.join(k[:40] for k in extra[:3])}")
+    verb = request.get("verb")  # an unknown verb is refused where the verbs are answered
+    caps = request.get("caps")
+    if not isinstance(caps, dict) or set(caps) != {"timeSeconds", "outputBytes"}:
+        raise bad("caps must have exactly timeSeconds and outputBytes")
+    t, b = integer(caps["timeSeconds"]), integer(caps["outputBytes"])
+    if t is None or not 1 <= t <= 3600:
+        raise bad("caps.timeSeconds must be an integer from 1 to 3600")
+    if b is None or not 1024 <= b <= 16777216:
+        raise bad("caps.outputBytes must be an integer from 1024 to 16777216")
+    caps["timeSeconds"], caps["outputBytes"] = t, b
+    if verb == "describe":
+        if "input" in request:
+            raise bad("describe takes no input")
+    elif not isinstance(request.get("input"), dict):
+        raise bad(f"{verb} needs an input object")
+    if "network" in request:
+        check_network(request["network"])
+
+
+def check_network(network) -> None:
+    if not isinstance(network, dict) or len(network) != 1 or not ({"hosts"} == set(network) or {"replay"} == set(network)):
+        raise bad("network must be exactly one of hosts or replay")
+    if "hosts" in network:
+        hosts = network["hosts"]
+        if not isinstance(hosts, list) or not all(isinstance(h, str) and HOST.fullmatch(h) for h in hosts):
+            raise bad("network.hosts must be a list of host names")
+        return
+    replay = network["replay"]
+    if not isinstance(replay, dict) or set(replay) != {"start", "exchanges"}:
+        raise bad("network.replay must have exactly start and exchanges")
+    if not isinstance(replay["start"], str) or not INSTANT.fullmatch(replay["start"]):
+        raise bad("network.replay.start must be a UTC time like 2026-10-31T12:00:00Z")
+    if not isinstance(replay["exchanges"], dict):
+        raise bad("network.replay.exchanges must be an object")
+    for url, answers in replay["exchanges"].items():
+        if not isinstance(answers, list):
+            raise bad(f"the recorded answers for {url[:120]} must be a list")
+        for a in answers:
+            if not isinstance(a, dict) or not set(a) <= {"status", "headers", "body", "error"} or ("status" in a) == ("error" in a):
+                raise bad(f"a recorded answer for {url[:120]} must have status or error, not both")
+            if "status" in a:
+                status = integer(a["status"])
+                if status is None or not 100 <= status <= 599:
+                    raise bad(f"a recorded status for {url[:120]} must be an integer from 100 to 599")
+                a["status"] = status
+            if "error" in a and not (isinstance(a["error"], str) and a["error"]):
+                raise bad(f"a recorded error for {url[:120]} must be a non-empty string")
+            if "body" in a and not isinstance(a["body"], str):
+                raise bad(f"a recorded body for {url[:120]} must be a string")
+            if "headers" in a and not (isinstance(a["headers"], dict) and all(isinstance(v, str) for v in a["headers"].values())):
+                raise bad(f"recorded headers for {url[:120]} must map names to strings")
+
+
+def _no_duplicate_keys(pairs):
+    keys = [k for k, _ in pairs]
+    if len(set(keys)) != len(keys):
+        raise ValueError(f"a JSON object has the key {sorted(k for k in keys if keys.count(k) > 1)[0][:40]!r} twice")
+    return dict(pairs)
+
+
+def _no_constant(name):
+    raise ValueError(f"{name} is not JSON")
+
+
+def parse(raw) -> object:
+    """The request from stdin's bytes: strict UTF-8, strict JSON (no NaN, no duplicate keys). Anything it cannot
+    read is a bad request (exit 2), never this plugin's failure."""
+    try:
+        text = raw.decode("utf-8") if isinstance(raw, bytes) else raw
+        return json.loads(text, object_pairs_hook=_no_duplicate_keys, parse_constant=_no_constant)
+    except RecursionError:
+        raise bad("the request is nested too deeply")
+    except ValueError as err:  # not UTF-8, JSONDecodeError, NaN, a duplicate key, an integer too long to convert
+        raise bad(f"the request is not JSON: {str(err)[:200]}")
+
+
+def output_cap(request) -> Optional[int]:
+    """The caller's outputBytes as given, even when it is outside the schema's range: never write more."""
+    if isinstance(request, dict) and isinstance(request.get("caps"), dict):
+        return integer(request["caps"].get("outputBytes"))
+    return None
+
+
+def fit(code: int, envelope: dict, cap: Optional[int]) -> Tuple[int, bytes]:
+    """The answer as written, newline included, within cap. A success that does not fit becomes a failure; a
+    failure's warning is shortened until it fits; below the smallest failure envelope nothing is written."""
+    out = (json.dumps(envelope, ensure_ascii=False, separators=(",", ":")) + "\n").encode("utf-8")
+    if cap is None or len(out) <= cap:
+        return code, out
+    if envelope["ok"]:
+        code, envelope = FAILED, failure(f"the answer is larger than outputBytes ({cap})")
+    message = envelope["warnings"][0]
+    lo, hi = 1, len(message)  # the longest prefix that fits, by bisection
+    best = b""
+    while lo <= hi:
+        mid = (lo + hi) // 2
+        out = (json.dumps(failure(message[:mid]), ensure_ascii=False, separators=(",", ":")) + "\n").encode("utf-8")
+        if len(out) <= cap:
+            best, lo = out, mid + 1
+        else:
+            hi = mid - 1
+    return code, best
+
+
+def handle(request) -> Tuple[int, dict]:
+    check_request(request)
+    verb, caps, inp = request["verb"], request["caps"], request.get("input")
     try:
         if verb == "describe":
             data, not_read = describe()
@@ -248,23 +392,20 @@ def failure(message: str) -> dict:
 
 
 def main(stdin=None, stdout=None) -> int:
-    stdin, stdout = stdin or sys.stdin, stdout or sys.stdout
-    cap = None
+    """stdin and stdout are binary streams (the process's own by default)."""
+    stdin, stdout = stdin or sys.stdin.buffer, stdout or sys.stdout.buffer
+    request, cap = None, None
     try:
-        request = json.loads(stdin.read())
-        if isinstance(request, dict) and isinstance(request.get("caps"), dict):
-            cap = request["caps"].get("outputBytes") if isinstance(request["caps"].get("outputBytes"), int) else None
+        request = parse(stdin.read())
+        cap = output_cap(request)
         code, envelope = handle(request)
-    except json.JSONDecodeError as err:
-        code, envelope = BAD_REQUEST, failure(f"the request is not JSON: {err}")
     except Refused as err:
         code, envelope = err.code, failure(str(err))
     except Exception as err:  # anything else is this plugin's failure, still answered in the envelope
         code, envelope = FAILED, failure(f"{type(err).__name__}: {str(err)[:300]}")
-    text = json.dumps(envelope, ensure_ascii=False, separators=(",", ":"))
-    if cap is not None and len(text.encode("utf-8")) > cap:
-        code, text = FAILED, json.dumps(failure(f"the answer is larger than outputBytes ({cap})"))
-    stdout.write(text + "\n")
+    code, out = fit(code, envelope, cap)
+    stdout.write(out)
+    stdout.flush()
     return code
 
 

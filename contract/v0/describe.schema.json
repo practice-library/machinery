@@ -4,11 +4,12 @@
   "title": "describe data, contract v0",
   "description": "What a plugin is and what it can do. A gateway reads it before sending any other verb.",
   "type": "object",
-  "required": ["name", "version", "contracts", "job", "verbs"],
+  "required": ["name", "version", "contract", "contracts", "job", "verbs"],
   "additionalProperties": false,
   "properties": {
     "name": {"type": "string", "pattern": "^[a-z][a-z0-9-]*$"},
     "version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+    "contract": {"type": "string", "pattern": "^[0-9]+$", "description": "The contract version this answer is written in: the version of the request."},
     "contracts": {
       "type": "array",
       "description": "Contract versions the plugin speaks.",

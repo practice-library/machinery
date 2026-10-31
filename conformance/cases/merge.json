@@ -107,7 +107,8 @@
        "httpStatus": 200,
        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
       }
-     ]
+     ],
+     "notReached": []
     },
     {
      "unit": "host:help.example.com",
@@ -130,7 +131,8 @@
        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
        "reason": "quote-gone: the page was read and the quote is not in its text"
       }
-     ]
+     ],
+     "notReached": []
     }
    ]
   }
@@ -200,7 +202,8 @@
          "httpStatus": 200,
          "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
         }
-       ]
+       ],
+       "notReached": []
       }
      ]
     }
@@ -272,7 +275,8 @@
        "results": [],
        "aborted": {
         "reason": "blocked: robots.txt of docs.example.com disallows /a"
-       }
+       },
+       "notReached": []
       },
       {
        "unit": "host:help.example.com",
@@ -295,7 +299,8 @@
          "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
          "reason": "quote-gone: the page was read and the quote is not in its text"
         }
-       ]
+       ],
+       "notReached": []
       }
      ]
     }
@@ -336,7 +341,8 @@
          "httpStatus": 200,
          "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
         }
-       ]
+       ],
+       "notReached": []
       },
       {
        "unit": "host:docs.example.com",
@@ -358,7 +364,8 @@
          "httpStatus": 200,
          "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
         }
-       ]
+       ],
+       "notReached": []
       },
       {
        "unit": "host:help.example.com",
@@ -381,7 +388,8 @@
          "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
          "reason": "quote-gone: the page was read and the quote is not in its text"
         }
-       ]
+       ],
+       "notReached": []
       }
      ]
     }
@@ -416,7 +424,8 @@
          "httpStatus": 200,
          "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
         }
-       ]
+       ],
+       "notReached": []
       },
       {
        "unit": "host:help.example.com",
@@ -439,7 +448,8 @@
          "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
          "reason": "quote-gone: the page was read and the quote is not in its text"
         }
-       ]
+       ],
+       "notReached": []
       }
      ]
     }
@@ -474,6 +484,479 @@
          "httpStatus": 200,
          "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
         }
+       ],
+       "notReached": []
+      },
+      {
+       "unit": "host:help.example.com",
+       "shardKey": "help.example.com",
+       "requests": 2,
+       "robots": {
+        "host": "help.example.com",
+        "fetchedAt": "2026-10-31T12:00:01Z",
+        "httpStatus": 200,
+        "verdict": "allowed"
+       },
+       "results": [
+        {
+         "node": "rule.example.b",
+         "source": "https://help.example.com/b",
+         "fetchedAt": "2026-10-31T12:00:05Z",
+         "outcome": "changed",
+         "finalUrl": "https://help.example.com/b",
+         "httpStatus": 200,
+         "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+         "reason": "quote-gone: the page was read and the quote is not in its text"
+        }
+       ],
+       "notReached": []
+      },
+      {
+       "unit": "host:other.example.com",
+       "shardKey": "other.example.com",
+       "requests": 2,
+       "robots": {
+        "host": "help.example.com",
+        "fetchedAt": "2026-10-31T12:00:01Z",
+        "httpStatus": 200,
+        "verdict": "allowed"
+       },
+       "results": [
+        {
+         "node": "rule.example.b",
+         "source": "https://help.example.com/b",
+         "fetchedAt": "2026-10-31T12:00:05Z",
+         "outcome": "changed",
+         "finalUrl": "https://help.example.com/b",
+         "httpStatus": 200,
+         "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+         "reason": "quote-gone: the page was read and the quote is not in its text"
+        }
+       ],
+       "notReached": []
+      }
+     ]
+    }
+   },
+   "expect": {
+    "exit": 1,
+    "ok": false
+   }
+  },
+  {
+   "name": "the partials in another order give the same report",
+   "request": {
+    "input": {
+     "partials": [
+      {
+       "unit": "host:help.example.com",
+       "shardKey": "help.example.com",
+       "requests": 2,
+       "robots": {
+        "host": "help.example.com",
+        "fetchedAt": "2026-10-31T12:00:01Z",
+        "httpStatus": 200,
+        "verdict": "allowed"
+       },
+       "results": [
+        {
+         "node": "rule.example.b",
+         "source": "https://help.example.com/b",
+         "fetchedAt": "2026-10-31T12:00:05Z",
+         "outcome": "changed",
+         "finalUrl": "https://help.example.com/b",
+         "httpStatus": 200,
+         "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+         "reason": "quote-gone: the page was read and the quote is not in its text"
+        }
+       ],
+       "notReached": []
+      },
+      {
+       "unit": "host:docs.example.com",
+       "shardKey": "docs.example.com",
+       "requests": 2,
+       "robots": {
+        "host": "docs.example.com",
+        "fetchedAt": "2026-10-31T12:00:01Z",
+        "httpStatus": 200,
+        "verdict": "allowed"
+       },
+       "results": [
+        {
+         "node": "rule.example.a",
+         "source": "https://docs.example.com/a",
+         "fetchedAt": "2026-10-31T12:00:03Z",
+         "outcome": "unchanged",
+         "finalUrl": "https://docs.example.com/a",
+         "httpStatus": 200,
+         "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+       ],
+       "notReached": []
+      }
+     ]
+    }
+   },
+   "expect": {
+    "data": {
+     "schemaVersion": 1,
+     "graph": "vendors/example",
+     "requests": 4,
+     "aborted": {
+      "$absent": true
+     },
+     "run": {
+      "startedAt": "2026-10-31T12:00:00Z",
+      "finishedAt": "2026-10-31T12:00:05Z"
+     },
+     "robots": [
+      {
+       "host": "docs.example.com"
+      },
+      {
+       "host": "help.example.com"
+      }
+     ],
+     "results": [
+      {
+       "node": "rule.example.a",
+       "outcome": "unchanged"
+      },
+      {
+       "node": "rule.example.b",
+       "outcome": "changed"
+      },
+      {
+       "node": "term.example.offsite",
+       "outcome": "unreadable"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "two aborted units: the reasons in unit order, partials in plan order",
+   "request": {
+    "input": {
+     "partials": [
+      {
+       "unit": "host:docs.example.com",
+       "shardKey": "docs.example.com",
+       "requests": 1,
+       "robots": {
+        "host": "docs.example.com",
+        "fetchedAt": "2026-10-31T12:00:01Z",
+        "httpStatus": 200,
+        "verdict": "disallowed"
+       },
+       "results": [],
+       "notReached": [],
+       "aborted": {
+        "reason": "blocked: robots.txt of docs.example.com disallows /a"
+       }
+      },
+      {
+       "unit": "host:help.example.com",
+       "shardKey": "help.example.com",
+       "requests": 1,
+       "robots": {
+        "host": "help.example.com",
+        "fetchedAt": "2026-10-31T12:00:01Z",
+        "httpStatus": 200,
+        "verdict": "disallowed"
+       },
+       "results": [],
+       "notReached": [],
+       "aborted": {
+        "reason": "blocked: robots.txt of help.example.com disallows /b"
+       }
+      }
+     ]
+    }
+   },
+   "expect": {
+    "data": {
+     "aborted": {
+      "reason": "blocked: robots.txt of docs.example.com disallows /a; blocked: robots.txt of help.example.com disallows /b"
+     },
+     "results": []
+    }
+   }
+  },
+  {
+   "name": "two aborted units: the same reasons with the partials reversed",
+   "request": {
+    "input": {
+     "partials": [
+      {
+       "unit": "host:help.example.com",
+       "shardKey": "help.example.com",
+       "requests": 1,
+       "robots": {
+        "host": "help.example.com",
+        "fetchedAt": "2026-10-31T12:00:01Z",
+        "httpStatus": 200,
+        "verdict": "disallowed"
+       },
+       "results": [],
+       "notReached": [],
+       "aborted": {
+        "reason": "blocked: robots.txt of help.example.com disallows /b"
+       }
+      },
+      {
+       "unit": "host:docs.example.com",
+       "shardKey": "docs.example.com",
+       "requests": 1,
+       "robots": {
+        "host": "docs.example.com",
+        "fetchedAt": "2026-10-31T12:00:01Z",
+        "httpStatus": 200,
+        "verdict": "disallowed"
+       },
+       "results": [],
+       "notReached": [],
+       "aborted": {
+        "reason": "blocked: robots.txt of docs.example.com disallows /a"
+       }
+      }
+     ]
+    }
+   },
+   "expect": {
+    "data": {
+     "aborted": {
+      "reason": "blocked: robots.txt of docs.example.com disallows /a; blocked: robots.txt of help.example.com disallows /b"
+     },
+     "results": []
+    }
+   }
+  },
+  {
+   "name": "a partial that leaves out a fact of its unit is refused",
+   "request": {
+    "input": {
+     "plan": {
+      "units": [
+       {
+        "id": "host:docs.example.com",
+        "shardKey": "docs.example.com",
+        "pacing": {
+         "minIntervalSeconds": 2.0
+        },
+        "budget": {
+         "requests": 10
+        },
+        "host": {
+         "host": "docs.example.com",
+         "format": "html",
+         "maxBytes": 2000000,
+         "timeoutSeconds": 30
+        },
+        "userAgent": "practice-library-graphs/1 (+https://github.com/practice-library/graphs)",
+        "retryAfterMaxSeconds": 60,
+        "facts": [
+         {
+          "node": "rule.example.a",
+          "source": "https://docs.example.com/a",
+          "measuredAt": "2026-09-01",
+          "quote": {
+           "text": "Q."
+          }
+         },
+         {
+          "node": "rule.example.a2",
+          "source": "https://docs.example.com/a2",
+          "measuredAt": "2026-09-01",
+          "quote": {
+           "text": "Q."
+          }
+         }
+        ]
+       },
+       {
+        "id": "host:help.example.com",
+        "shardKey": "help.example.com",
+        "pacing": {
+         "minIntervalSeconds": 2.0
+        },
+        "budget": {
+         "requests": 10
+        },
+        "host": {
+         "host": "help.example.com",
+         "format": "html",
+         "maxBytes": 2000000,
+         "timeoutSeconds": 30
+        },
+        "userAgent": "practice-library-graphs/1 (+https://github.com/practice-library/graphs)",
+        "retryAfterMaxSeconds": 60,
+        "facts": [
+         {
+          "node": "rule.example.b",
+          "source": "https://help.example.com/b",
+          "measuredAt": "2026-09-01",
+          "quote": {
+           "text": "Q."
+          }
+         }
+        ]
+       }
+      ]
+     },
+     "partials": [
+      {
+       "unit": "host:docs.example.com",
+       "shardKey": "docs.example.com",
+       "requests": 2,
+       "robots": {
+        "host": "docs.example.com",
+        "fetchedAt": "2026-10-31T12:00:01Z",
+        "httpStatus": 200,
+        "verdict": "allowed"
+       },
+       "results": [
+        {
+         "node": "rule.example.a",
+         "source": "https://docs.example.com/a",
+         "fetchedAt": "2026-10-31T12:00:03Z",
+         "outcome": "unchanged",
+         "finalUrl": "https://docs.example.com/a",
+         "httpStatus": 200,
+         "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+       ],
+       "notReached": []
+      },
+      {
+       "unit": "host:help.example.com",
+       "shardKey": "help.example.com",
+       "requests": 2,
+       "robots": {
+        "host": "help.example.com",
+        "fetchedAt": "2026-10-31T12:00:01Z",
+        "httpStatus": 200,
+        "verdict": "allowed"
+       },
+       "results": [
+        {
+         "node": "rule.example.b",
+         "source": "https://help.example.com/b",
+         "fetchedAt": "2026-10-31T12:00:05Z",
+         "outcome": "changed",
+         "finalUrl": "https://help.example.com/b",
+         "httpStatus": 200,
+         "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+         "reason": "quote-gone: the page was read and the quote is not in its text"
+        }
+       ],
+       "notReached": []
+      }
+     ]
+    }
+   },
+   "expect": {
+    "exit": 1,
+    "ok": false
+   }
+  },
+  {
+   "name": "a fact the partial did not reach waits: it is left out of the report",
+   "request": {
+    "input": {
+     "plan": {
+      "units": [
+       {
+        "id": "host:docs.example.com",
+        "shardKey": "docs.example.com",
+        "pacing": {
+         "minIntervalSeconds": 2.0
+        },
+        "budget": {
+         "requests": 10
+        },
+        "host": {
+         "host": "docs.example.com",
+         "format": "html",
+         "maxBytes": 2000000,
+         "timeoutSeconds": 30
+        },
+        "userAgent": "practice-library-graphs/1 (+https://github.com/practice-library/graphs)",
+        "retryAfterMaxSeconds": 60,
+        "facts": [
+         {
+          "node": "rule.example.a",
+          "source": "https://docs.example.com/a",
+          "measuredAt": "2026-09-01",
+          "quote": {
+           "text": "Q."
+          }
+         },
+         {
+          "node": "rule.example.a2",
+          "source": "https://docs.example.com/a2",
+          "measuredAt": "2026-09-01",
+          "quote": {
+           "text": "Q."
+          }
+         }
+        ]
+       },
+       {
+        "id": "host:help.example.com",
+        "shardKey": "help.example.com",
+        "pacing": {
+         "minIntervalSeconds": 2.0
+        },
+        "budget": {
+         "requests": 10
+        },
+        "host": {
+         "host": "help.example.com",
+         "format": "html",
+         "maxBytes": 2000000,
+         "timeoutSeconds": 30
+        },
+        "userAgent": "practice-library-graphs/1 (+https://github.com/practice-library/graphs)",
+        "retryAfterMaxSeconds": 60,
+        "facts": [
+         {
+          "node": "rule.example.b",
+          "source": "https://help.example.com/b",
+          "measuredAt": "2026-09-01",
+          "quote": {
+           "text": "Q."
+          }
+         }
+        ]
+       }
+      ]
+     },
+     "partials": [
+      {
+       "unit": "host:docs.example.com",
+       "shardKey": "docs.example.com",
+       "requests": 2,
+       "robots": {
+        "host": "docs.example.com",
+        "fetchedAt": "2026-10-31T12:00:01Z",
+        "httpStatus": 200,
+        "verdict": "allowed"
+       },
+       "results": [
+        {
+         "node": "rule.example.a",
+         "source": "https://docs.example.com/a",
+         "fetchedAt": "2026-10-31T12:00:03Z",
+         "outcome": "unchanged",
+         "finalUrl": "https://docs.example.com/a",
+         "httpStatus": 200,
+         "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+       ],
+       "notReached": [
+        "rule.example.a2"
        ]
       },
       {
@@ -497,11 +980,69 @@
          "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
          "reason": "quote-gone: the page was read and the quote is not in its text"
         }
-       ]
+       ],
+       "notReached": []
+      }
+     ]
+    }
+   },
+   "expect": {
+    "data": {
+     "results": [
+      {
+       "node": "rule.example.a",
+       "outcome": "unchanged"
       },
       {
-       "unit": "host:other.example.com",
-       "shardKey": "other.example.com",
+       "node": "rule.example.b"
+      },
+      {
+       "node": "term.example.offsite"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "a partial result naming a fact that is in no unit is refused",
+   "request": {
+    "input": {
+     "partials": [
+      {
+       "unit": "host:docs.example.com",
+       "shardKey": "docs.example.com",
+       "requests": 2,
+       "robots": {
+        "host": "docs.example.com",
+        "fetchedAt": "2026-10-31T12:00:01Z",
+        "httpStatus": 200,
+        "verdict": "allowed"
+       },
+       "results": [
+        {
+         "node": "rule.example.a",
+         "source": "https://docs.example.com/a",
+         "fetchedAt": "2026-10-31T12:00:03Z",
+         "outcome": "unchanged",
+         "finalUrl": "https://docs.example.com/a",
+         "httpStatus": 200,
+         "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        {
+         "node": "rule.example.nowhere",
+         "source": "https://docs.example.com/nowhere",
+         "fetchedAt": "2026-10-31T12:00:03Z",
+         "outcome": "unchanged",
+         "finalUrl": "https://docs.example.com/a",
+         "httpStatus": 200,
+         "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+       ],
+       "notReached": []
+      },
+      {
+       "unit": "host:help.example.com",
+       "shardKey": "help.example.com",
        "requests": 2,
        "robots": {
         "host": "help.example.com",
@@ -520,7 +1061,128 @@
          "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
          "reason": "quote-gone: the page was read and the quote is not in its text"
         }
-       ]
+       ],
+       "notReached": []
+      }
+     ]
+    }
+   },
+   "expect": {
+    "exit": 1,
+    "ok": false
+   }
+  },
+  {
+   "name": "a partial with another unit's shard key is refused",
+   "request": {
+    "input": {
+     "partials": [
+      {
+       "unit": "host:docs.example.com",
+       "shardKey": "help.example.com",
+       "requests": 2,
+       "robots": {
+        "host": "docs.example.com",
+        "fetchedAt": "2026-10-31T12:00:01Z",
+        "httpStatus": 200,
+        "verdict": "allowed"
+       },
+       "results": [
+        {
+         "node": "rule.example.a",
+         "source": "https://docs.example.com/a",
+         "fetchedAt": "2026-10-31T12:00:03Z",
+         "outcome": "unchanged",
+         "finalUrl": "https://docs.example.com/a",
+         "httpStatus": 200,
+         "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+       ],
+       "notReached": []
+      },
+      {
+       "unit": "host:help.example.com",
+       "shardKey": "help.example.com",
+       "requests": 2,
+       "robots": {
+        "host": "help.example.com",
+        "fetchedAt": "2026-10-31T12:00:01Z",
+        "httpStatus": 200,
+        "verdict": "allowed"
+       },
+       "results": [
+        {
+         "node": "rule.example.b",
+         "source": "https://help.example.com/b",
+         "fetchedAt": "2026-10-31T12:00:05Z",
+         "outcome": "changed",
+         "finalUrl": "https://help.example.com/b",
+         "httpStatus": 200,
+         "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+         "reason": "quote-gone: the page was read and the quote is not in its text"
+        }
+       ],
+       "notReached": []
+      }
+     ]
+    }
+   },
+   "expect": {
+    "exit": 1,
+    "ok": false
+   }
+  },
+  {
+   "name": "a partial with another host's robots.txt is refused",
+   "request": {
+    "input": {
+     "partials": [
+      {
+       "unit": "host:docs.example.com",
+       "shardKey": "docs.example.com",
+       "requests": 2,
+       "robots": {
+        "host": "help.example.com",
+        "fetchedAt": "2026-10-31T12:00:01Z",
+        "httpStatus": 200,
+        "verdict": "allowed"
+       },
+       "results": [
+        {
+         "node": "rule.example.a",
+         "source": "https://docs.example.com/a",
+         "fetchedAt": "2026-10-31T12:00:03Z",
+         "outcome": "unchanged",
+         "finalUrl": "https://docs.example.com/a",
+         "httpStatus": 200,
+         "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+       ],
+       "notReached": []
+      },
+      {
+       "unit": "host:help.example.com",
+       "shardKey": "help.example.com",
+       "requests": 2,
+       "robots": {
+        "host": "help.example.com",
+        "fetchedAt": "2026-10-31T12:00:01Z",
+        "httpStatus": 200,
+        "verdict": "allowed"
+       },
+       "results": [
+        {
+         "node": "rule.example.b",
+         "source": "https://help.example.com/b",
+         "fetchedAt": "2026-10-31T12:00:05Z",
+         "outcome": "changed",
+         "finalUrl": "https://help.example.com/b",
+         "httpStatus": 200,
+         "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+         "reason": "quote-gone: the page was read and the quote is not in its text"
+        }
+       ],
+       "notReached": []
       }
      ]
     }

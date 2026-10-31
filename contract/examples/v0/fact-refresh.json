@@ -1,0 +1,919 @@
+{
+ "groups": [
+  {
+   "schema": "https://github.com/practice-library/machinery/contract/v0/fact-refresh.schema.json#/$defs/quote",
+   "valid": [
+    {
+     "name": "text",
+     "instance": {
+      "text": "A."
+     }
+    },
+    {
+     "name": "cells",
+     "instance": {
+      "cells": [
+       "Free",
+       "20"
+      ]
+     }
+    }
+   ],
+   "invalid": [
+    {
+     "name": "both",
+     "instance": {
+      "text": "A.",
+      "cells": [
+       "A"
+      ]
+     }
+    },
+    {
+     "name": "empty text",
+     "instance": {
+      "text": ""
+     }
+    },
+    {
+     "name": "no cells",
+     "instance": {
+      "cells": []
+     }
+    },
+    {
+     "name": "251 cells",
+     "instance": {
+      "cells": [
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a",
+       "a"
+      ]
+     }
+    },
+    {
+     "name": "an unknown key",
+     "instance": {
+      "row": "| a |"
+     }
+    }
+   ]
+  },
+  {
+   "schema": "https://github.com/practice-library/machinery/contract/v0/fact-refresh.schema.json#/$defs/unit",
+   "valid": [
+    {
+     "name": "one fact",
+     "instance": {
+      "id": "host:docs.example.com",
+      "shardKey": "docs.example.com",
+      "pacing": {
+       "minIntervalSeconds": 2.0
+      },
+      "budget": {
+       "requests": 3
+      },
+      "host": {
+       "host": "docs.example.com",
+       "format": "html",
+       "maxBytes": 2000000,
+       "timeoutSeconds": 30
+      },
+      "userAgent": "example-agent/1",
+      "retryAfterMaxSeconds": 60,
+      "facts": [
+       {
+        "node": "rule.example.a",
+        "source": "https://docs.example.com/a",
+        "measuredAt": "2026-09-01",
+        "quote": {
+         "text": "Each key may send 20 requests per second."
+        }
+       }
+      ]
+     }
+    }
+   ],
+   "invalid": [
+    {
+     "name": "a budget of 1",
+     "instance": {
+      "id": "host:docs.example.com",
+      "shardKey": "docs.example.com",
+      "pacing": {
+       "minIntervalSeconds": 2.0
+      },
+      "budget": {
+       "requests": 1
+      },
+      "host": {
+       "host": "docs.example.com",
+       "format": "html",
+       "maxBytes": 2000000,
+       "timeoutSeconds": 30
+      },
+      "userAgent": "example-agent/1",
+      "retryAfterMaxSeconds": 60,
+      "facts": [
+       {
+        "node": "rule.example.a",
+        "source": "https://docs.example.com/a",
+        "measuredAt": "2026-09-01",
+        "quote": {
+         "text": "Each key may send 20 requests per second."
+        }
+       }
+      ]
+     }
+    },
+    {
+     "name": "no facts",
+     "instance": {
+      "id": "host:docs.example.com",
+      "shardKey": "docs.example.com",
+      "pacing": {
+       "minIntervalSeconds": 2.0
+      },
+      "budget": {
+       "requests": 3
+      },
+      "host": {
+       "host": "docs.example.com",
+       "format": "html",
+       "maxBytes": 2000000,
+       "timeoutSeconds": 30
+      },
+      "userAgent": "example-agent/1",
+      "retryAfterMaxSeconds": 60,
+      "facts": []
+     }
+    },
+    {
+     "name": "an id that is not host:",
+     "instance": {
+      "id": "docs.example.com",
+      "shardKey": "docs.example.com",
+      "pacing": {
+       "minIntervalSeconds": 2.0
+      },
+      "budget": {
+       "requests": 3
+      },
+      "host": {
+       "host": "docs.example.com",
+       "format": "html",
+       "maxBytes": 2000000,
+       "timeoutSeconds": 30
+      },
+      "userAgent": "example-agent/1",
+      "retryAfterMaxSeconds": 60,
+      "facts": [
+       {
+        "node": "rule.example.a",
+        "source": "https://docs.example.com/a",
+        "measuredAt": "2026-09-01",
+        "quote": {
+         "text": "Each key may send 20 requests per second."
+        }
+       }
+      ]
+     }
+    },
+    {
+     "name": "pacing over 60 s",
+     "instance": {
+      "id": "host:docs.example.com",
+      "shardKey": "docs.example.com",
+      "pacing": {
+       "minIntervalSeconds": 61
+      },
+      "budget": {
+       "requests": 3
+      },
+      "host": {
+       "host": "docs.example.com",
+       "format": "html",
+       "maxBytes": 2000000,
+       "timeoutSeconds": 30
+      },
+      "userAgent": "example-agent/1",
+      "retryAfterMaxSeconds": 60,
+      "facts": [
+       {
+        "node": "rule.example.a",
+        "source": "https://docs.example.com/a",
+        "measuredAt": "2026-09-01",
+        "quote": {
+         "text": "Each key may send 20 requests per second."
+        }
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "schema": "https://github.com/practice-library/machinery/contract/v0/fact-refresh.schema.json#/$defs/plan",
+   "valid": [
+    {
+     "name": "one unit",
+     "instance": {
+      "graph": "vendors/example",
+      "commit": "0000000000000000000000000000000000000000",
+      "run": {
+       "id": 1,
+       "url": "https://github.com/practice-library/graphs/actions/runs/1"
+      },
+      "startedAt": "2026-10-31T12:00:00Z",
+      "maxParallel": 1,
+      "units": [
+       {
+        "id": "host:docs.example.com",
+        "shardKey": "docs.example.com",
+        "pacing": {
+         "minIntervalSeconds": 2.0
+        },
+        "budget": {
+         "requests": 3
+        },
+        "host": {
+         "host": "docs.example.com",
+         "format": "html",
+         "maxBytes": 2000000,
+         "timeoutSeconds": 30
+        },
+        "userAgent": "example-agent/1",
+        "retryAfterMaxSeconds": 60,
+        "facts": [
+         {
+          "node": "rule.example.a",
+          "source": "https://docs.example.com/a",
+          "measuredAt": "2026-09-01",
+          "quote": {
+           "text": "Each key may send 20 requests per second."
+          }
+         }
+        ]
+       }
+      ],
+      "decided": []
+     }
+    }
+   ],
+   "invalid": [
+    {
+     "name": "maxParallel 4",
+     "instance": {
+      "graph": "vendors/example",
+      "commit": "0000000000000000000000000000000000000000",
+      "run": {
+       "id": 1,
+       "url": "https://github.com/practice-library/graphs/actions/runs/1"
+      },
+      "startedAt": "2026-10-31T12:00:00Z",
+      "maxParallel": 4,
+      "units": [
+       {
+        "id": "host:docs.example.com",
+        "shardKey": "docs.example.com",
+        "pacing": {
+         "minIntervalSeconds": 2.0
+        },
+        "budget": {
+         "requests": 3
+        },
+        "host": {
+         "host": "docs.example.com",
+         "format": "html",
+         "maxBytes": 2000000,
+         "timeoutSeconds": 30
+        },
+        "userAgent": "example-agent/1",
+        "retryAfterMaxSeconds": 60,
+        "facts": [
+         {
+          "node": "rule.example.a",
+          "source": "https://docs.example.com/a",
+          "measuredAt": "2026-09-01",
+          "quote": {
+           "text": "Each key may send 20 requests per second."
+          }
+         }
+        ]
+       }
+      ],
+      "decided": []
+     }
+    },
+    {
+     "name": "maxParallel 0",
+     "instance": {
+      "graph": "vendors/example",
+      "commit": "0000000000000000000000000000000000000000",
+      "run": {
+       "id": 1,
+       "url": "https://github.com/practice-library/graphs/actions/runs/1"
+      },
+      "startedAt": "2026-10-31T12:00:00Z",
+      "maxParallel": 0,
+      "units": [
+       {
+        "id": "host:docs.example.com",
+        "shardKey": "docs.example.com",
+        "pacing": {
+         "minIntervalSeconds": 2.0
+        },
+        "budget": {
+         "requests": 3
+        },
+        "host": {
+         "host": "docs.example.com",
+         "format": "html",
+         "maxBytes": 2000000,
+         "timeoutSeconds": 30
+        },
+        "userAgent": "example-agent/1",
+        "retryAfterMaxSeconds": 60,
+        "facts": [
+         {
+          "node": "rule.example.a",
+          "source": "https://docs.example.com/a",
+          "measuredAt": "2026-09-01",
+          "quote": {
+           "text": "Each key may send 20 requests per second."
+          }
+         }
+        ]
+       }
+      ],
+      "decided": []
+     }
+    },
+    {
+     "name": "a short commit",
+     "instance": {
+      "graph": "vendors/example",
+      "commit": "000000000000000000000000000000000000000",
+      "run": {
+       "id": 1,
+       "url": "https://github.com/practice-library/graphs/actions/runs/1"
+      },
+      "startedAt": "2026-10-31T12:00:00Z",
+      "maxParallel": 1,
+      "units": [
+       {
+        "id": "host:docs.example.com",
+        "shardKey": "docs.example.com",
+        "pacing": {
+         "minIntervalSeconds": 2.0
+        },
+        "budget": {
+         "requests": 3
+        },
+        "host": {
+         "host": "docs.example.com",
+         "format": "html",
+         "maxBytes": 2000000,
+         "timeoutSeconds": 30
+        },
+        "userAgent": "example-agent/1",
+        "retryAfterMaxSeconds": 60,
+        "facts": [
+         {
+          "node": "rule.example.a",
+          "source": "https://docs.example.com/a",
+          "measuredAt": "2026-09-01",
+          "quote": {
+           "text": "Each key may send 20 requests per second."
+          }
+         }
+        ]
+       }
+      ],
+      "decided": []
+     }
+    }
+   ]
+  },
+  {
+   "schema": "https://github.com/practice-library/machinery/contract/v0/fact-refresh.schema.json#/$defs/partial",
+   "valid": [
+    {
+     "name": "reached",
+     "instance": {
+      "unit": "host:docs.example.com",
+      "shardKey": "docs.example.com",
+      "requests": 2,
+      "robots": {
+       "host": "docs.example.com",
+       "fetchedAt": "2026-10-31T12:00:01Z",
+       "httpStatus": 200,
+       "verdict": "allowed"
+      },
+      "results": [
+       {
+        "node": "rule.example.a",
+        "source": "https://docs.example.com/a",
+        "fetchedAt": "2026-10-31T12:00:03Z",
+        "outcome": "unchanged",
+        "finalUrl": "https://docs.example.com/a",
+        "httpStatus": 200,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+       }
+      ],
+      "notReached": []
+     }
+    },
+    {
+     "name": "budget ran out before robots.txt",
+     "instance": {
+      "unit": "host:docs.example.com",
+      "shardKey": "docs.example.com",
+      "requests": 0,
+      "robots": null,
+      "results": [],
+      "notReached": [
+       "rule.example.a"
+      ]
+     }
+    },
+    {
+     "name": "aborted",
+     "instance": {
+      "unit": "host:docs.example.com",
+      "shardKey": "docs.example.com",
+      "requests": 1,
+      "robots": {
+       "host": "docs.example.com",
+       "fetchedAt": "2026-10-31T12:00:01Z",
+       "httpStatus": 200,
+       "verdict": "disallowed"
+      },
+      "results": [],
+      "notReached": [],
+      "aborted": {
+       "reason": "blocked: robots.txt disallows /a"
+      }
+     }
+    }
+   ],
+   "invalid": [
+    {
+     "name": "no notReached",
+     "instance": {
+      "unit": "host:docs.example.com",
+      "shardKey": "docs.example.com",
+      "requests": 2,
+      "robots": {
+       "host": "docs.example.com",
+       "fetchedAt": "2026-10-31T12:00:01Z",
+       "httpStatus": 200,
+       "verdict": "allowed"
+      },
+      "results": [
+       {
+        "node": "rule.example.a",
+        "source": "https://docs.example.com/a",
+        "fetchedAt": "2026-10-31T12:00:03Z",
+        "outcome": "unchanged",
+        "finalUrl": "https://docs.example.com/a",
+        "httpStatus": 200,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+       }
+      ]
+     }
+    },
+    {
+     "name": "aborted with results",
+     "instance": {
+      "unit": "host:docs.example.com",
+      "shardKey": "docs.example.com",
+      "requests": 2,
+      "robots": {
+       "host": "docs.example.com",
+       "fetchedAt": "2026-10-31T12:00:01Z",
+       "httpStatus": 200,
+       "verdict": "allowed"
+      },
+      "results": [
+       {
+        "node": "rule.example.a",
+        "source": "https://docs.example.com/a",
+        "fetchedAt": "2026-10-31T12:00:03Z",
+        "outcome": "unchanged",
+        "finalUrl": "https://docs.example.com/a",
+        "httpStatus": 200,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+       }
+      ],
+      "notReached": [],
+      "aborted": {
+       "reason": "x"
+      }
+     }
+    },
+    {
+     "name": "a fact twice in notReached",
+     "instance": {
+      "unit": "host:docs.example.com",
+      "shardKey": "docs.example.com",
+      "requests": 2,
+      "robots": {
+       "host": "docs.example.com",
+       "fetchedAt": "2026-10-31T12:00:01Z",
+       "httpStatus": 200,
+       "verdict": "allowed"
+      },
+      "results": [
+       {
+        "node": "rule.example.a",
+        "source": "https://docs.example.com/a",
+        "fetchedAt": "2026-10-31T12:00:03Z",
+        "outcome": "unchanged",
+        "finalUrl": "https://docs.example.com/a",
+        "httpStatus": 200,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+       }
+      ],
+      "notReached": [
+       "rule.example.b",
+       "rule.example.b"
+      ]
+     }
+    },
+    {
+     "name": "over 200 requests",
+     "instance": {
+      "unit": "host:docs.example.com",
+      "shardKey": "docs.example.com",
+      "requests": 201,
+      "robots": {
+       "host": "docs.example.com",
+       "fetchedAt": "2026-10-31T12:00:01Z",
+       "httpStatus": 200,
+       "verdict": "allowed"
+      },
+      "results": [
+       {
+        "node": "rule.example.a",
+        "source": "https://docs.example.com/a",
+        "fetchedAt": "2026-10-31T12:00:03Z",
+        "outcome": "unchanged",
+        "finalUrl": "https://docs.example.com/a",
+        "httpStatus": 200,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+       }
+      ],
+      "notReached": []
+     }
+    }
+   ]
+  },
+  {
+   "schema": "https://github.com/practice-library/machinery/contract/v0/fact-refresh.schema.json#/$defs/runInput",
+   "valid": [
+    {
+     "name": "the plan input",
+     "instance": {
+      "graph": "vendors/example",
+      "commit": "0000000000000000000000000000000000000000",
+      "run": {
+       "id": 1,
+       "url": "https://github.com/practice-library/graphs/actions/runs/1"
+      },
+      "now": "2026-10-31T12:00:00Z",
+      "policy": {},
+      "nodes": []
+     }
+    }
+   ],
+   "invalid": [
+    {
+     "name": "no nodes",
+     "instance": {
+      "graph": "vendors/example",
+      "commit": "0000000000000000000000000000000000000000",
+      "run": {
+       "id": 1,
+       "url": "https://github.com/practice-library/graphs/actions/runs/1"
+      },
+      "now": "2026-10-31T12:00:00Z",
+      "policy": {}
+     }
+    }
+   ]
+  },
+  {
+   "schema": "https://github.com/practice-library/machinery/contract/v0/fact-refresh.schema.json#/$defs/runData",
+   "valid": [
+    {
+     "name": "a report",
+     "instance": {
+      "schemaVersion": 1,
+      "graph": "vendors/example",
+      "commit": "0000000000000000000000000000000000000000",
+      "run": {
+       "id": 1,
+       "url": "https://github.com/practice-library/graphs/actions/runs/1",
+       "startedAt": "2026-10-31T12:00:00Z",
+       "finishedAt": "2026-10-31T12:00:03Z"
+      },
+      "requests": 2,
+      "robots": [
+       {
+        "host": "docs.example.com",
+        "fetchedAt": "2026-10-31T12:00:01Z",
+        "httpStatus": 200,
+        "verdict": "allowed"
+       }
+      ],
+      "results": [
+       {
+        "node": "rule.example.a",
+        "source": "https://docs.example.com/a",
+        "fetchedAt": "2026-10-31T12:00:03Z",
+        "outcome": "unchanged",
+        "finalUrl": "https://docs.example.com/a",
+        "httpStatus": 200,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+       }
+      ]
+     }
+    }
+   ],
+   "invalid": [
+    {
+     "name": "no results",
+     "instance": {
+      "schemaVersion": 1,
+      "graph": "vendors/example",
+      "commit": "0000000000000000000000000000000000000000",
+      "run": {
+       "id": 1,
+       "url": "https://github.com/practice-library/graphs/actions/runs/1",
+       "startedAt": "2026-10-31T12:00:00Z",
+       "finishedAt": "2026-10-31T12:00:03Z"
+      },
+      "requests": 2,
+      "robots": [
+       {
+        "host": "docs.example.com",
+        "fetchedAt": "2026-10-31T12:00:01Z",
+        "httpStatus": 200,
+        "verdict": "allowed"
+       }
+      ]
+     }
+    }
+   ]
+  }
+ ]
+}

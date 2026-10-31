@@ -61,7 +61,7 @@ GitHub disables the schedule of a public repository after 60 days without activi
 
 ## Contract v0: the job as a plugin
 
-The same job also runs as a plugin of the machinery contract (`contract/README.md`): `bin/fact-refresh-plugin` takes one JSON request on stdin and writes one JSON envelope on stdout. It answers `describe`, `plan` (a graph to one work unit per source host, with the request cap split between them), `run-unit` (one host's facts to a partial result) and `merge` (the partial results to one refresh report). `conformance/` is the black-box suite every plugin must pass; CI runs it against this one. The scheduled workflow above still runs the job in one process; a gateway that runs units as a matrix (at most 3 at once) is the next step.
+The same job also runs as a plugin of the machinery contract (`contract/README.md`): `bin/fact-refresh-plugin` takes one JSON request on stdin and writes one JSON envelope on stdout. It answers `describe`, `plan` (a graph to one work unit per source host, with the request cap split between them), `run-unit` (one host's facts to a partial result) and `merge` (the partial results to one refresh report). `conformance/` is the black-box suite every plugin must pass; CI runs it against this one. The scheduled workflow above still runs the job in one process. The next step is the gateway: a reusable workflow in practice-library/.github that runs `plan`, one `run-unit` job per host (at most 3 at once), and `merge`.
 
 ## Development
 

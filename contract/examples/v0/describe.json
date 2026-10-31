@@ -1,0 +1,163 @@
+{
+ "groups": [
+  {
+   "schema": "https://github.com/practice-library/machinery/contract/v0/describe.schema.json",
+   "valid": [
+    {
+     "name": "a shardable job",
+     "instance": {
+      "name": "fact-refresh-python",
+      "version": "0.1.0",
+      "contract": "0",
+      "contracts": [
+       "0"
+      ],
+      "job": "fact-refresh",
+      "verbs": {
+       "plan": {
+        "shardable": false
+       },
+       "run-unit": {
+        "shardable": true
+       },
+       "merge": {
+        "shardable": false
+       }
+      }
+     }
+    },
+    {
+     "name": "a job that is not shardable",
+     "instance": {
+      "name": "fact-refresh-python",
+      "version": "0.1.0",
+      "contract": "0",
+      "contracts": [
+       "0"
+      ],
+      "job": "fact-refresh",
+      "verbs": {
+       "run": {
+        "shardable": false
+       }
+      }
+     }
+    }
+   ],
+   "invalid": [
+    {
+     "name": "no contract",
+     "instance": {
+      "name": "fact-refresh-python",
+      "version": "0.1.0",
+      "contracts": [
+       "0"
+      ],
+      "job": "fact-refresh",
+      "verbs": {
+       "plan": {
+        "shardable": false
+       },
+       "run-unit": {
+        "shardable": true
+       },
+       "merge": {
+        "shardable": false
+       }
+      }
+     }
+    },
+    {
+     "name": "plan without merge",
+     "instance": {
+      "name": "fact-refresh-python",
+      "version": "0.1.0",
+      "contract": "0",
+      "contracts": [
+       "0"
+      ],
+      "job": "fact-refresh",
+      "verbs": {
+       "plan": {
+        "shardable": false
+       },
+       "run-unit": {
+        "shardable": true
+       }
+      }
+     }
+    },
+    {
+     "name": "an unknown verb",
+     "instance": {
+      "name": "fact-refresh-python",
+      "version": "0.1.0",
+      "contract": "0",
+      "contracts": [
+       "0"
+      ],
+      "job": "fact-refresh",
+      "verbs": {
+       "plan": {
+        "shardable": false
+       },
+       "run-unit": {
+        "shardable": true
+       },
+       "merge": {
+        "shardable": false
+       },
+       "fetch": {
+        "shardable": false
+       }
+      }
+     }
+    },
+    {
+     "name": "no contracts",
+     "instance": {
+      "name": "fact-refresh-python",
+      "version": "0.1.0",
+      "contract": "0",
+      "contracts": [],
+      "job": "fact-refresh",
+      "verbs": {
+       "plan": {
+        "shardable": false
+       },
+       "run-unit": {
+        "shardable": true
+       },
+       "merge": {
+        "shardable": false
+       }
+      }
+     }
+    },
+    {
+     "name": "a version that is not x.y.z",
+     "instance": {
+      "name": "fact-refresh-python",
+      "version": "0.1",
+      "contract": "0",
+      "contracts": [
+       "0"
+      ],
+      "job": "fact-refresh",
+      "verbs": {
+       "plan": {
+        "shardable": false
+       },
+       "run-unit": {
+        "shardable": true
+       },
+       "merge": {
+        "shardable": false
+       }
+      }
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -104,7 +104,8 @@
        "node": "rule.example.b",
        "outcome": "unchanged"
       }
-     ]
+     ],
+     "notReached": []
     }
    }
   },
@@ -496,6 +497,9 @@
        "node": "rule.example.a",
        "outcome": "unchanged"
       }
+     ],
+     "notReached": [
+      "rule.example.b"
      ]
     }
    }

@@ -28,7 +28,8 @@
       "merge": {
        "shardable": false
       }
-     }
+     },
+     "contract": "0"
     }
    }
   },
@@ -300,6 +301,97 @@
    },
    "expect": {
     "exit": 1,
+    "ok": false
+   }
+  },
+  {
+   "name": "a contract that is not digits is exit 2",
+   "invalidRequest": true,
+   "request": {
+    "contract": "v0"
+   },
+   "expect": {
+    "exit": 2,
+    "ok": false
+   }
+  },
+  {
+   "name": "caps.timeSeconds true is exit 2, not 1 second",
+   "invalidRequest": true,
+   "request": {
+    "caps": {
+     "timeSeconds": true,
+     "outputBytes": 1048576
+    }
+   },
+   "expect": {
+    "exit": 2,
+    "ok": false
+   }
+  },
+  {
+   "name": "a negative caps.timeSeconds is exit 2",
+   "invalidRequest": true,
+   "request": {
+    "caps": {
+     "timeSeconds": -1,
+     "outputBytes": 1048576
+    }
+   },
+   "expect": {
+    "exit": 2,
+    "ok": false
+   }
+  },
+  {
+   "name": "caps.outputBytes below 1024 is exit 2, and the refusal still fits in it",
+   "invalidRequest": true,
+   "request": {
+    "caps": {
+     "timeSeconds": 60,
+     "outputBytes": 100
+    }
+   },
+   "expect": {
+    "exit": 2,
+    "ok": false
+   }
+  },
+  {
+   "name": "describe with an input is exit 2",
+   "invalidRequest": true,
+   "request": {
+    "input": {}
+   },
+   "expect": {
+    "exit": 2,
+    "ok": false
+   }
+  },
+  {
+   "name": "an unknown top-level key is exit 2",
+   "invalidRequest": true,
+   "request": {
+    "debug": true
+   },
+   "expect": {
+    "exit": 2,
+    "ok": false
+   }
+  },
+  {
+   "name": "a key given twice is exit 2",
+   "stdin": "{\"contract\": \"0\", \"verb\": \"describe\", \"verb\": \"plan\", \"caps\": {\"timeSeconds\": 60, \"outputBytes\": 1048576}}",
+   "expect": {
+    "exit": 2,
+    "ok": false
+   }
+  },
+  {
+   "name": "NaN is not JSON: exit 2",
+   "stdin": "{\"contract\": \"0\", \"verb\": \"describe\", \"caps\": {\"timeSeconds\": NaN, \"outputBytes\": 1048576}}",
+   "expect": {
+    "exit": 2,
     "ok": false
    }
   }

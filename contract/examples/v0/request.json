@@ -1,0 +1,304 @@
+{
+ "groups": [
+  {
+   "schema": "https://github.com/practice-library/machinery/contract/v0/request.schema.json",
+   "valid": [
+    {
+     "name": "describe",
+     "instance": {
+      "contract": "0",
+      "verb": "describe",
+      "caps": {
+       "timeSeconds": 60,
+       "outputBytes": 1048576
+      }
+     }
+    },
+    {
+     "name": "plan with an input",
+     "instance": {
+      "contract": "0",
+      "verb": "plan",
+      "caps": {
+       "timeSeconds": 60,
+       "outputBytes": 1048576
+      },
+      "input": {}
+     }
+    },
+    {
+     "name": "run-unit with listed hosts",
+     "instance": {
+      "contract": "0",
+      "verb": "run-unit",
+      "caps": {
+       "timeSeconds": 60,
+       "outputBytes": 1048576
+      },
+      "input": {},
+      "network": {
+       "hosts": [
+        "docs.example.com"
+       ]
+      }
+     }
+    },
+    {
+     "name": "run-unit on replay",
+     "instance": {
+      "contract": "0",
+      "verb": "run-unit",
+      "caps": {
+       "timeSeconds": 60,
+       "outputBytes": 1048576
+      },
+      "input": {},
+      "network": {
+       "replay": {
+        "start": "2026-10-31T12:00:00Z",
+        "exchanges": {
+         "https://docs.example.com/robots.txt": [
+          {
+           "status": 200,
+           "body": "User-agent: *\n"
+          }
+         ],
+         "https://docs.example.com/a": [
+          {
+           "error": "connection reset"
+          }
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "name": "the smallest caps",
+     "instance": {
+      "contract": "0",
+      "verb": "describe",
+      "caps": {
+       "timeSeconds": 1,
+       "outputBytes": 1024
+      }
+     }
+    }
+   ],
+   "invalid": [
+    {
+     "name": "no caps",
+     "instance": {
+      "contract": "0",
+      "verb": "describe"
+     }
+    },
+    {
+     "name": "a contract that is not digits",
+     "instance": {
+      "contract": "v0",
+      "verb": "describe",
+      "caps": {
+       "timeSeconds": 60,
+       "outputBytes": 1048576
+      }
+     }
+    },
+    {
+     "name": "a contract with a trailing newline",
+     "instance": {
+      "contract": "0\n",
+      "verb": "describe",
+      "caps": {
+       "timeSeconds": 60,
+       "outputBytes": 1048576
+      }
+     }
+    },
+    {
+     "name": "an unknown verb",
+     "instance": {
+      "contract": "0",
+      "verb": "fetch",
+      "caps": {
+       "timeSeconds": 60,
+       "outputBytes": 1048576
+      }
+     }
+    },
+    {
+     "name": "an unknown top-level key",
+     "instance": {
+      "contract": "0",
+      "verb": "describe",
+      "caps": {
+       "timeSeconds": 60,
+       "outputBytes": 1048576
+      },
+      "debug": true
+     }
+    },
+    {
+     "name": "describe with an input",
+     "instance": {
+      "contract": "0",
+      "verb": "describe",
+      "caps": {
+       "timeSeconds": 60,
+       "outputBytes": 1048576
+      },
+      "input": {}
+     }
+    },
+    {
+     "name": "plan without an input",
+     "instance": {
+      "contract": "0",
+      "verb": "plan",
+      "caps": {
+       "timeSeconds": 60,
+       "outputBytes": 1048576
+      }
+     }
+    },
+    {
+     "name": "timeSeconds true",
+     "instance": {
+      "contract": "0",
+      "verb": "describe",
+      "caps": {
+       "timeSeconds": true,
+       "outputBytes": 1048576
+      }
+     }
+    },
+    {
+     "name": "timeSeconds 0",
+     "instance": {
+      "contract": "0",
+      "verb": "describe",
+      "caps": {
+       "timeSeconds": 0,
+       "outputBytes": 1048576
+      }
+     }
+    },
+    {
+     "name": "timeSeconds 3601",
+     "instance": {
+      "contract": "0",
+      "verb": "describe",
+      "caps": {
+       "timeSeconds": 3601,
+       "outputBytes": 1048576
+      }
+     }
+    },
+    {
+     "name": "outputBytes 1023",
+     "instance": {
+      "contract": "0",
+      "verb": "describe",
+      "caps": {
+       "timeSeconds": 60,
+       "outputBytes": 1023
+      }
+     }
+    },
+    {
+     "name": "another cap",
+     "instance": {
+      "contract": "0",
+      "verb": "describe",
+      "caps": {
+       "timeSeconds": 60,
+       "outputBytes": 1048576,
+       "memory": 1
+      }
+     }
+    },
+    {
+     "name": "both hosts and replay",
+     "instance": {
+      "contract": "0",
+      "verb": "describe",
+      "caps": {
+       "timeSeconds": 60,
+       "outputBytes": 1048576
+      },
+      "network": {
+       "hosts": [],
+       "replay": {
+        "start": "2026-10-31T12:00:00Z",
+        "exchanges": {}
+       }
+      }
+     }
+    },
+    {
+     "name": "an upper-case host",
+     "instance": {
+      "contract": "0",
+      "verb": "describe",
+      "caps": {
+       "timeSeconds": 60,
+       "outputBytes": 1048576
+      },
+      "network": {
+       "hosts": [
+        "Docs.example.com"
+       ]
+      }
+     }
+    },
+    {
+     "name": "a recorded answer with status and error",
+     "instance": {
+      "contract": "0",
+      "verb": "describe",
+      "caps": {
+       "timeSeconds": 60,
+       "outputBytes": 1048576
+      },
+      "network": {
+       "replay": {
+        "start": "2026-10-31T12:00:00Z",
+        "exchanges": {
+         "https://a.example.com/": [
+          {
+           "status": 200,
+           "error": "x"
+          }
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "name": "a status of 600",
+     "instance": {
+      "contract": "0",
+      "verb": "describe",
+      "caps": {
+       "timeSeconds": 60,
+       "outputBytes": 1048576
+      },
+      "network": {
+       "replay": {
+        "start": "2026-10-31T12:00:00Z",
+        "exchanges": {
+         "https://a.example.com/": [
+          {
+           "status": 600
+          }
+         ]
+        }
+       }
+      }
+     }
+    }
+   ]
+  }
+ ]
+}
