@@ -77,6 +77,7 @@ class Refresher:
         self.host_requests: Dict[str, int] = {}
         self.last_request: Dict[str, datetime] = {}
         self.graph_requests = 0
+        self.skipped: List[Tuple[str, str, str]] = []
 
     # -- one request -------------------------------------------------------------------------------------
     def _request(self, host: Host, url: str) -> Response:
@@ -133,6 +134,10 @@ class Refresher:
                 break  # an unlisted target: recorded as unreachable below
             url, at_host = target, listed
         rec = {"host": host.host, "fetchedAt": stamp(self.clock.now()), "httpStatus": resp.status}
+        if 200 <= resp.status < 300 and resp.truncated:
+            # A robots.txt cut at maxBytes may have lost a later Disallow: it cannot be read whole.
+            rec["verdict"] = "unreachable"
+            return rec, None, f"robots.txt of {host.host} is larger than maxBytes ({at_host.max_bytes}); not read whole"
         if 200 <= resp.status < 300:
             rules = robotstxt.parse(resp.body.decode("utf-8", "replace"), self.policy.user_agent)
             denied = [u for u in urls if not rules.allows(u)]
@@ -216,12 +221,19 @@ class Refresher:
     def refresh_graph(self, root: str, graph: str, commit: str, run_id: int, run_url: str) -> dict:
         vendor = graph.split("/", 1)[1]
         self.graph_requests = 0
+        self.skipped: List[Tuple[str, str, str]] = []  # (graph, node, reason): facts left out of the report
         started = self.clock.now()
         today: date = started.date()
         results: List[dict] = []
         due: List[Tuple[dict, Host]] = []
         for node in load_nodes(root, graph):
             src = node["source"]
+            if not URL_RE.match(src):
+                # A port, userinfo, upper case or a scheme other than https: never fetched. The report's
+                # url pattern rejects such a source too, so it is logged instead of reported, and the rest
+                # of the graph's report stays valid.
+                self.skipped.append((graph, node["id"], f"blocked: source {src[:120]} is not a plain https URL; not fetched"))
+                continue
             parts = urlsplit(src)
             host = self.policy.host_for(parts.hostname or "", vendor) if parts.scheme == "https" else None
             if host is None:

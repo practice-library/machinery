@@ -19,6 +19,7 @@ def cmd_refresh(a: argparse.Namespace) -> int:
                                         text=True, check=True).stdout.strip()
     policy = load_policy(a.graphs)
     refresher = Refresher(policy, UrllibTransport(), pace=a.pace)
+    notes = []
     lines = ["| Graph | Requests | unchanged | changed | unreadable | Aborted |", "|---|---|---|---|---|---|"]
     for graph in a.graph or find_graphs(a.graphs):
         report = refresher.refresh_graph(a.graphs, graph, commit, a.run_id, a.run_url)
@@ -27,8 +28,12 @@ def cmd_refresh(a: argparse.Namespace) -> int:
         with open(path, "w", encoding="utf-8") as f:
             f.write(json.dumps(report, indent=2, ensure_ascii=False) + "\n")
         count = {k: sum(1 for r in report["results"] if r["outcome"] == k) for k in ("unchanged", "changed", "unreadable")}
+        for g, node, why in refresher.skipped:
+            notes.append(f"- {g} `{node}`: {why}")
         lines.append(f"| {graph} | {report['requests']} | {count['unchanged']} | {count['changed']} | "
                      f"{count['unreadable']} | {report.get('aborted', {}).get('reason', '')} |")
+    if notes:
+        lines += ["", "Left out of the reports:", *notes]
     print("\n".join(lines))
     summary = os.environ.get("GITHUB_STEP_SUMMARY")
     if summary:

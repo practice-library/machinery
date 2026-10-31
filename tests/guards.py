@@ -129,6 +129,16 @@ GUARDS = [
      "flat = str(text)", f"{P}.Rework.test_report_text_stays_inside_its_code_span"),
     ("no posted body mentions anyone", O, 'p.replace("@", "&#64;") if i % 2 == 0 else p', "p",
      f"{P}.Rework.test_no_posted_body_mentions_anyone"),
+    # safety follow-ups (issue 3)
+    ("a robots.txt cut at maxBytes is unreachable", R, "if 200 <= resp.status < 300 and resp.truncated:", "if False:",
+     f"{T}.Safety.test_a_robots_txt_cut_at_max_bytes_aborts"),
+    ("a source with a port or userinfo is blocked", R,
+     "if not URL_RE.match(src):\n                # A port", "if False:\n                # A port",
+     f"{T}.Safety.test_a_source_with_a_port_or_userinfo_is_blocked_and_kept_out_of_the_report"),
+    ("a request has a total wall-clock deadline", "factrefresh/http.py", "if left <= 0:", "if False:",
+     "tests.test_http.TotalDeadline.test_a_slow_drip_cannot_outlast_the_total_timeout"),
+    ("each read waits at most for the time left", "factrefresh/http.py", "_shrink_timeout(resp, left)", "pass",
+     "tests.test_http.TotalDeadline.test_each_read_waits_at_most_for_the_time_left"),
 ]
 
 
