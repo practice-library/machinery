@@ -1,0 +1,13 @@
+{
+  "id": "term.example.offsite",
+  "type": "term",
+  "name": "term.example.offsite",
+  "source": "https://unlisted.example.net/terms",
+  "measuredAt": "2026-09-06",
+  "attrs": {
+    "verdict": "allowed",
+    "fetched_at": "2026-09-06T10:00:00Z",
+    "quote": "Terms may change."
+  },
+  "edges": []
+}

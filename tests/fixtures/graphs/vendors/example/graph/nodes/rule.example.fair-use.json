@@ -1,0 +1,13 @@
+{
+  "id": "rule.example.fair-use",
+  "type": "rule",
+  "name": "rule.example.fair-use",
+  "source": "https://docs.example.com/limits",
+  "measuredAt": "2026-09-04",
+  "attrs": {
+    "verdict": "allowed",
+    "fetched_at": "2026-09-04T10:00:00Z",
+    "quote": "Sustained traffic above the limit is throttled."
+  },
+  "edges": []
+}

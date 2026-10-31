@@ -1,0 +1,13 @@
+{
+  "id": "price.example.input",
+  "type": "price",
+  "name": "price.example.input",
+  "source": "https://docs.example.com/pricing",
+  "measuredAt": "2026-09-03",
+  "attrs": {
+    "verdict": "allowed",
+    "fetched_at": "2026-09-03T10:00:00Z",
+    "quote": "Input costs 3 credits per thousand units."
+  },
+  "edges": []
+}

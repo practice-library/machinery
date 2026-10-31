@@ -1,0 +1,13 @@
+{
+  "id": "product.example.borrowed",
+  "type": "product",
+  "name": "product.example.borrowed",
+  "source": "https://docs.other.example.org/widget",
+  "measuredAt": "2026-09-07",
+  "attrs": {
+    "verdict": "allowed",
+    "fetched_at": "2026-09-07T10:00:00Z",
+    "quote": "The widget ships monthly."
+  },
+  "edges": []
+}

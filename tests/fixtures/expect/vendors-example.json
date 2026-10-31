@@ -1,0 +1,88 @@
+{
+  "schemaVersion": 1,
+  "graph": "vendors/example",
+  "commit": "0e6f5ed237dd52f9fe02a33f8c6b8ec653a3a2c3",
+  "run": {
+    "id": 7,
+    "url": "https://github.com/practice-library/machinery/actions/runs/7",
+    "startedAt": "2026-10-31T12:00:00Z",
+    "finishedAt": "2026-10-31T12:00:07Z"
+  },
+  "requests": 6,
+  "robots": [
+    {
+      "host": "docs.example.com",
+      "fetchedAt": "2026-10-31T12:00:00Z",
+      "httpStatus": 200,
+      "verdict": "allowed"
+    },
+    {
+      "host": "help.example.com",
+      "fetchedAt": "2026-10-31T12:00:00Z",
+      "httpStatus": 404,
+      "verdict": "absent"
+    }
+  ],
+  "results": [
+    {
+      "node": "limit.example.burst",
+      "source": "https://docs.example.com/limits",
+      "finalUrl": "https://docs.example.com/limits",
+      "httpStatus": 200,
+      "fetchedAt": "2026-10-31T12:00:02Z",
+      "sha256": "928e97bc56cfd1087771dac62d56a6192f45059c89511f2ffa4f75e16f868483",
+      "outcome": "unchanged"
+    },
+    {
+      "node": "plan.example.free",
+      "source": "https://docs.example.com/plans",
+      "finalUrl": "https://docs.example.com/plans",
+      "httpStatus": 200,
+      "fetchedAt": "2026-10-31T12:00:04Z",
+      "sha256": "ae8ef739534a6e451098d1f57c36c2a8fb89090a7cd7369ddf05ba41f64169aa",
+      "outcome": "changed",
+      "reason": "quote-gone: the page was read and the quote is not in its text"
+    },
+    {
+      "node": "price.example.input",
+      "source": "https://docs.example.com/pricing",
+      "httpStatus": 503,
+      "fetchedAt": "2026-10-31T12:00:07Z",
+      "outcome": "unreadable",
+      "reason": "unreachable: 503 with Retry-After 3600, beyond retryAfterMaxSeconds; docs.example.com stopped for this run",
+      "retryAfterSeconds": 3600
+    },
+    {
+      "node": "product.example.borrowed",
+      "source": "https://docs.other.example.org/widget",
+      "fetchedAt": "2026-10-31T12:00:00Z",
+      "outcome": "unreadable",
+      "reason": "blocked: docs.other.example.org is not listed for example in policy/sources.json; not fetched"
+    },
+    {
+      "node": "rule.example.fair-use",
+      "source": "https://docs.example.com/limits",
+      "finalUrl": "https://docs.example.com/limits",
+      "httpStatus": 200,
+      "fetchedAt": "2026-10-31T12:00:02Z",
+      "sha256": "928e97bc56cfd1087771dac62d56a6192f45059c89511f2ffa4f75e16f868483",
+      "outcome": "unchanged"
+    },
+    {
+      "node": "term.example.offsite",
+      "source": "https://unlisted.example.net/terms",
+      "fetchedAt": "2026-10-31T12:00:00Z",
+      "outcome": "unreadable",
+      "reason": "blocked: unlisted.example.net is not listed for example in policy/sources.json; not fetched"
+    },
+    {
+      "node": "term.example.support",
+      "source": "https://help.example.com/support.txt",
+      "finalUrl": "https://help.example.com/support.txt",
+      "httpStatus": 200,
+      "fetchedAt": "2026-10-31T12:00:07Z",
+      "sha256": "cb4b2becac91e6b34b12400f9beaf064c6d28980f6f7b9c560e3518818e66831",
+      "outcome": "unchanged"
+    }
+  ]
+}
