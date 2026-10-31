@@ -7,7 +7,7 @@ import os
 import unittest
 
 from factrefresh.graphs import find_graphs, load_policy
-from factrefresh.refresh import URL_RE, Refresher
+from factrefresh.refresh import Refresher, plain_url
 from tests.support import COMMIT, GRAPHS, FIXTURES, RUN_URL, FakeClock, GraphsCopy, Replay, edit_policy, exchanges
 
 UA = "practice-library-graphs/1 (+https://github.com/practice-library/graphs)"
@@ -306,7 +306,39 @@ class Safety(unittest.TestCase):
         self.assertNotIn("plan.example.free", by_node(report))
         self.assertEqual(sorted(n for _, n, _ in refresher.skipped), ["limit.example.burst", "plan.example.free"])
         self.assertTrue(all(why.startswith("blocked:") for _, _, why in refresher.skipped))
-        self.assertTrue(all(URL_RE.match(r["source"]) for r in report["results"]))
+        self.assertTrue(all(plain_url(r["source"]) for r in report["results"]))
+
+
+class SchemaUrl(unittest.TestCase):
+    def skipped_for(self, src):
+        with GraphsCopy() as root:
+            path = os.path.join(root, "vendors/example/graph/nodes/limit.example.burst.json")
+            with open(path, encoding="utf-8") as f:
+                node = json.load(f)
+            node["source"] = src
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(node, f)
+            clock = FakeClock()
+            t = Replay(exchanges(), clock)
+            refresher = Refresher(load_policy(root), t, clock)
+            report = refresher.refresh_graph(root, "vendors/example", COMMIT, 7, RUN_URL)
+        self.assertNotIn(src, t.urls())
+        self.assertNotIn("limit.example.burst", by_node(report))
+        self.assertEqual([n for _, n, _ in refresher.skipped], ["limit.example.burst"])
+        self.assertTrue(all(plain_url(r["source"]) for r in report["results"]))
+
+    def test_a_source_longer_than_the_schema_allows_is_blocked(self):
+        src = "https://docs.example.com/" + "a" * 2000
+        self.assertGreater(len(src), 2000)
+        self.skipped_for(src)
+
+    def test_a_source_with_a_trailing_newline_is_blocked(self):
+        self.skipped_for("https://docs.example.com/limits\n")
+
+    def test_a_url_of_exactly_the_schema_length_is_plain(self):
+        src = "https://docs.example.com/" + "a" * (2000 - len("https://docs.example.com/"))
+        self.assertEqual(len(src), 2000)
+        self.assertTrue(plain_url(src))
 
 
 class Pacing(unittest.TestCase):

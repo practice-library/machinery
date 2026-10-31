@@ -5,6 +5,8 @@ follows one. Tests replace UrllibTransport with a transport that replays recorde
 """
 from __future__ import annotations
 
+import http.client
+import io
 import socket
 import time
 import urllib.error
@@ -33,19 +35,22 @@ class _NoRedirect(urllib.request.HTTPRedirectHandler):
 class UrllibTransport:
     """Sequential requests, one at a time, so never more than one connection to a host.
 
-    `timeout` is a total wall-clock budget for the whole request, not only for each socket operation: the
-    body is read in chunks, every blocking read waits at most for the time left, and a body still arriving
-    when the budget is spent fails, so a server dripping bytes cannot hold a request open longer."""
+    `timeout` is a total wall-clock budget for the whole request, not only for each socket operation. Once
+    connected, the socket is wrapped so that every read, of the status line, the headers and the body alike,
+    waits at most for the time left and fails once it is spent: a server dripping header lines or body bytes
+    cannot hold a request open longer. Connecting and the TLS handshake keep the per-operation timeout."""
 
     def __init__(self, opener=None, monotonic: Callable[[], float] = time.monotonic) -> None:
-        self._opener = opener or urllib.request.build_opener(_NoRedirect())
+        self._fixed_opener = opener  # tests pass one; otherwise each request gets its own, bound to its deadline
         self._monotonic = monotonic
 
     def get(self, url: str, headers: Dict[str, str], timeout: float, max_bytes: int) -> Response:
         deadline = self._monotonic() + timeout
         req = urllib.request.Request(url, headers=headers, method="GET")
+        opener = self._fixed_opener or urllib.request.build_opener(
+            _NoRedirect(), _DeadlineHTTPSHandler(deadline_connection(deadline, self._monotonic, timeout)))
         try:
-            resp = self._opener.open(req, timeout=timeout)
+            resp = opener.open(req, timeout=timeout)
         except urllib.error.HTTPError as err:  # 3xx (not followed), 4xx, 5xx
             resp = err
         except (urllib.error.URLError, socket.timeout, ConnectionError, OSError) as err:
@@ -77,6 +82,77 @@ class UrllibTransport:
 
 
 CHUNK = 65536
+
+
+class _DeadlineSocket:
+    """A connected socket whose every read waits at most for the time left before a fixed deadline, and
+    fails with socket.timeout once the deadline has passed. Everything else goes to the socket itself."""
+
+    def __init__(self, sock, deadline: float, monotonic: Callable[[], float], timeout: float) -> None:
+        self._sock = sock
+        self._deadline = deadline
+        self._monotonic = monotonic
+        self._timeout = timeout
+        self._io_refs = 0  # files made by makefile and not yet closed
+        self._closed = False
+
+    def _arm(self) -> None:
+        left = self._deadline - self._monotonic()
+        if left <= 0:
+            raise socket.timeout(f"no complete response within the total timeout of {self._timeout:g} seconds")
+        self._sock.settimeout(left)
+
+    def recv_into(self, buffer, nbytes=0, flags=0):
+        self._arm()
+        return self._sock.recv_into(buffer, nbytes, flags)
+
+    def recv(self, bufsize, flags=0):
+        self._arm()
+        return self._sock.recv(bufsize, flags)
+
+    def makefile(self, mode="rb", buffering=None, **_kwargs):
+        # http.client reads the status line, headers and body through this file, so through recv_into above.
+        self._io_refs += 1
+        return io.BufferedReader(socket.SocketIO(self, "rb"))
+
+    # urllib closes the connection's socket as soon as the headers are read; as with socket.socket, the
+    # real close waits until the response's file is closed too, or the body could not be read.
+    def _decref_socketios(self):
+        if self._io_refs > 0:
+            self._io_refs -= 1
+        if self._closed and self._io_refs == 0:
+            self._sock.close()
+
+    def close(self):
+        self._closed = True
+        if self._io_refs == 0:
+            self._sock.close()
+
+    def __getattr__(self, name):
+        return getattr(self._sock, name)
+
+
+def deadline_connection(deadline: float, monotonic: Callable[[], float], timeout: float):
+    """An HTTPSConnection class whose socket, once connected, is a _DeadlineSocket."""
+
+    class DeadlineHTTPSConnection(http.client.HTTPSConnection):
+        def connect(self):
+            super().connect()
+            self.sock = _DeadlineSocket(self.sock, deadline, monotonic, timeout)
+
+    return DeadlineHTTPSConnection
+
+
+class _DeadlineHTTPSHandler(urllib.request.HTTPSHandler):
+    def __init__(self, connection_class) -> None:
+        super().__init__()
+        self._connection_class = connection_class
+
+    def https_open(self, req):
+        kwargs = {"context": self._context}
+        if hasattr(self, "_check_hostname"):  # Python before 3.12
+            kwargs["check_hostname"] = self._check_hostname
+        return self.do_open(self._connection_class, req, **kwargs)
 
 
 def _shrink_timeout(resp, seconds: float) -> None:
