@@ -257,3 +257,51 @@ class ContentLength(unittest.TestCase):
                                            per_read=0.01)
                 self.assertIsInstance(got, TransportError)
                 self.assertIn("malformed", str(got))
+
+
+
+class ContentLengthBoundaries(unittest.TestCase):
+    """Literal values around every condition of the check: one under, exact, one over."""
+
+    def short_of(self, body_len, max_bytes=100, declared=b"200"):
+        got, _, _ = through_urllib([OK_HEAD + b"Content-Length: " + declared + b"\r\n\r\n", b"x" * body_len],
+                                   per_read=0.01, max_bytes=max_bytes)
+        return got
+
+    def test_99_bytes_under_a_cap_of_100_is_cut_off(self):
+        self.assertIsInstance(self.short_of(99), TransportError)
+
+    def test_exactly_100_bytes_at_a_cap_of_100_is_cut_off_not_ours(self):
+        # we read up to 101 bytes; 100 arriving means the server stopped, not that we cut it
+        self.assertIsInstance(self.short_of(100), TransportError)
+
+    def test_101_bytes_over_a_cap_of_100_is_our_own_cut(self):
+        got = self.short_of(101)
+        self.assertNotIsInstance(got, TransportError, str(got))
+        self.assertTrue(got.truncated)
+
+    def status(self, line):
+        got, _, _ = through_urllib([line + b"Content-Length: 10\r\n\r\n", b"hello"], per_read=0.01)
+        return got
+
+    def test_status_299_is_checked(self):
+        self.assertIsInstance(self.status(b"HTTP/1.1 299 Odd\r\n"), TransportError)
+
+    def test_status_300_is_returned_as_it_is(self):
+        got = self.status(b"HTTP/1.1 300 Multiple Choices\r\n")
+        self.assertNotIsInstance(got, TransportError, str(got))
+        self.assertEqual(got.status, 300)
+
+    def test_a_transfer_encoding_that_is_not_exactly_chunked_is_still_checked(self):
+        # http.client reads this body by Content-Length, so a short one is cut off
+        got, _, _ = through_urllib([OK_HEAD + b"Transfer-Encoding: gzip, chunked\r\nContent-Length: 10\r\n\r\n",
+                                    b"hello"], per_read=0.01)
+        self.assertIsInstance(got, TransportError)
+
+    def test_an_empty_content_length_is_malformed(self):
+        got, _, _ = through_urllib([OK_HEAD + b"Content-Length: \r\n\r\n", b"hello"], per_read=0.01)
+        self.assertIsInstance(got, TransportError)
+
+    def test_whitespace_around_a_content_length_is_not_malformed(self):
+        got, _, _ = through_urllib([OK_HEAD + b"Content-Length:   5  \r\n\r\n", b"hello"], per_read=0.01)
+        self.assertEqual(got.body, b"hello")

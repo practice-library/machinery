@@ -76,7 +76,10 @@ class UrllibTransport:
         ignores Content-Length) and a body we cut ourselves at maxBytes (reported as truncated). A
         Content-Length that is not plain digits, or duplicates that disagree, is a transport error too,
         rather than a reason to skip the check."""
-        if "chunked" in hdrs.get("transfer-encoding", "").lower():
+        chunked = getattr(resp, "chunked", None)
+        if chunked is None:  # not an http.client response: the rule http.client itself uses
+            chunked = hdrs.get("transfer-encoding", "").strip().lower() == "chunked"
+        if chunked:
             return  # http.client reads a chunked body by its chunks and ignores Content-Length
         get_all = getattr(resp.headers, "get_all", None)
         if get_all is not None:
