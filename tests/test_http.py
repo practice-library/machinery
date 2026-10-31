@@ -382,5 +382,12 @@ class FallbackHeaders(unittest.TestCase):
         self.assertIsInstance(self.get({"content-length": "6"}), TransportError)  # one over
         self.assertIsInstance(self.get({"content-length": "10"}), TransportError)  # more digits
 
+    def test_a_content_length_of_non_ascii_digits_is_malformed(self):
+        for value in ("\u0665", "\uff15", "1\u0660", "\u0661\u0660"):  # Arabic-Indic 5, fullwidth 5, 10, 10
+            with self.subTest(value=value):
+                got = self.get({"content-length": value})
+                self.assertIsInstance(got, TransportError)
+                self.assertIn("malformed", str(got))
+
     def test_no_content_length_is_not_checked(self):
         self.assertEqual(self.get({"content-type": "text/plain"}).body, b"hello")
