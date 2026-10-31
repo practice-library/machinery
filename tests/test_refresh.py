@@ -7,7 +7,7 @@ import os
 import unittest
 
 from factrefresh.graphs import find_graphs, load_policy
-from factrefresh.refresh import Refresher
+from factrefresh.refresh import Refresher, plain_url
 from tests.support import COMMIT, GRAPHS, FIXTURES, RUN_URL, FakeClock, GraphsCopy, Replay, edit_policy, exchanges
 
 UA = "practice-library-graphs/1 (+https://github.com/practice-library/graphs)"
@@ -273,6 +273,72 @@ class Rework(unittest.TestCase):
         self.assertEqual(t.urls().count("https://docs.example.com/plans"), 2)
         self.assertTrue(any(30 <= s <= 40 for s in clock.slept), clock.slept)
         self.assertEqual(by_node(report)["plan.example.free"]["outcome"], "changed")
+
+
+class Safety(unittest.TestCase):
+    def test_a_robots_txt_cut_at_max_bytes_aborts(self):
+        rec = exchanges()
+        long_robots = "User-agent: *\n" + "Allow: /allowed\n" * 400 + "Disallow: /plans\n"
+        rec["https://docs.example.com/robots.txt"] = [{"status": 200, "body": long_robots}]
+        report, t, _ = run(recorded=rec)
+        self.assertGreater(len(long_robots), 4096)  # maxBytes of docs.example.com in the fixture
+        self.assertTrue(all(u.endswith("/robots.txt") for u in t.urls()))
+        self.assertIn("aborted", report)
+        self.assertEqual(report["robots"][0]["verdict"], "unreachable")
+        self.assertIn("maxBytes", report["aborted"]["reason"])
+
+    def test_a_source_with_a_port_or_userinfo_is_blocked_and_kept_out_of_the_report(self):
+        with GraphsCopy() as root:
+            for node_id, src in (("limit.example.burst", "https://docs.example.com:8443/limits"),
+                                 ("plan.example.free", "https://reader@docs.example.com/plans")):
+                path = os.path.join(root, f"vendors/example/graph/nodes/{node_id}.json")
+                with open(path, encoding="utf-8") as f:
+                    node = json.load(f)
+                node["source"] = src
+                with open(path, "w", encoding="utf-8") as f:
+                    json.dump(node, f)
+            clock = FakeClock()
+            t = Replay(exchanges(), clock)
+            refresher = Refresher(load_policy(root), t, clock)
+            report = refresher.refresh_graph(root, "vendors/example", COMMIT, 7, RUN_URL)
+        self.assertFalse([u for u in t.urls() if ":8443" in u or "reader@" in u])
+        self.assertNotIn("limit.example.burst", by_node(report))
+        self.assertNotIn("plan.example.free", by_node(report))
+        self.assertEqual(sorted(n for _, n, _ in refresher.skipped), ["limit.example.burst", "plan.example.free"])
+        self.assertTrue(all(why.startswith("blocked:") for _, _, why in refresher.skipped))
+        self.assertTrue(all(plain_url(r["source"]) for r in report["results"]))
+
+
+class SchemaUrl(unittest.TestCase):
+    def skipped_for(self, src):
+        with GraphsCopy() as root:
+            path = os.path.join(root, "vendors/example/graph/nodes/limit.example.burst.json")
+            with open(path, encoding="utf-8") as f:
+                node = json.load(f)
+            node["source"] = src
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(node, f)
+            clock = FakeClock()
+            t = Replay(exchanges(), clock)
+            refresher = Refresher(load_policy(root), t, clock)
+            report = refresher.refresh_graph(root, "vendors/example", COMMIT, 7, RUN_URL)
+        self.assertNotIn(src, t.urls())
+        self.assertNotIn("limit.example.burst", by_node(report))
+        self.assertEqual([n for _, n, _ in refresher.skipped], ["limit.example.burst"])
+        self.assertTrue(all(plain_url(r["source"]) for r in report["results"]))
+
+    def test_a_source_longer_than_the_schema_allows_is_blocked(self):
+        src = "https://docs.example.com/" + "a" * 2000
+        self.assertGreater(len(src), 2000)
+        self.skipped_for(src)
+
+    def test_a_source_with_a_trailing_newline_is_blocked(self):
+        self.skipped_for("https://docs.example.com/limits\n")
+
+    def test_a_url_of_exactly_the_schema_length_is_plain(self):
+        src = "https://docs.example.com/" + "a" * (2000 - len("https://docs.example.com/"))
+        self.assertEqual(len(src), 2000)
+        self.assertTrue(plain_url(src))
 
 
 class Pacing(unittest.TestCase):
