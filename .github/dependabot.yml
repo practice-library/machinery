@@ -1,0 +1,9 @@
+# The consumer template of practice-library/.github: Dependabot proposes new pins for the reusable
+# workflows and actions used here.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5

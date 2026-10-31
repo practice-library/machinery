@@ -1,0 +1,279 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/practice-library/graphs/spec/refresh-report/schema.json",
+  "title": "Refresh report",
+  "description": "What one scheduled refresh run found for one graph. The workflow uploads it as a run artifact named refresh-report; the PR opener on the maintainer's machine reads it and opens pull requests and issues. The workflow never pushes and holds no secret; the opener never fetches. spec/README.md states the rules the run follows.",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "graph",
+    "commit",
+    "run",
+    "requests",
+    "robots",
+    "results"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "graph": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*/[a-z0-9][a-z0-9-]*$",
+      "description": "<domain>/<vendor>, the directory of the graph that was refreshed."
+    },
+    "commit": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$",
+      "description": "The commit whose nodes were read. The opener refuses a report whose commit is not an ancestor of main."
+    },
+    "run": {
+      "type": "object",
+      "required": [
+        "id",
+        "url",
+        "startedAt",
+        "finishedAt"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "url": {
+          "$ref": "#/$defs/url"
+        },
+        "startedAt": {
+          "$ref": "#/$defs/time"
+        },
+        "finishedAt": {
+          "$ref": "#/$defs/time"
+        }
+      }
+    },
+    "requests": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 200,
+      "description": "Every request the run made, robots.txt included; never more than maxRequestsPerRun in policy/sources.json."
+    },
+    "robots": {
+      "type": "array",
+      "description": "robots.txt of every host the run would fetch from, fetched at the start of every run, before any page.",
+      "items": {
+        "$ref": "#/$defs/robots"
+      }
+    },
+    "aborted": {
+      "type": "object",
+      "required": [
+        "reason"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        }
+      },
+      "description": "Present when the run stopped before fetching any page: a robots.txt disallows a path we fetch, or could not be read (5xx or network error, which counts as a disallow)."
+    },
+    "results": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/result"
+      }
+    }
+  },
+  "$defs": {
+    "result": {
+      "type": "object",
+      "required": [
+        "node",
+        "source",
+        "fetchedAt",
+        "outcome"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "node": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*(\\.[a-z0-9][a-z0-9-]*)+$"
+        },
+        "source": {
+          "$ref": "#/$defs/url",
+          "description": "The node's source as it was in the commit."
+        },
+        "finalUrl": {
+          "$ref": "#/$defs/url",
+          "description": "Where the fetch ended after redirects."
+        },
+        "httpStatus": {
+          "type": "integer",
+          "minimum": 100,
+          "maximum": 599
+        },
+        "fetchedAt": {
+          "$ref": "#/$defs/time"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Of the page text the quote was searched in."
+        },
+        "outcome": {
+          "enum": [
+            "unchanged",
+            "changed",
+            "unreadable"
+          ],
+          "description": "unchanged: the quote is on the page. changed: the page was read and the quote is not on it. unreadable: the page could not be read: HTTP error, 429 or 503 beyond retryAfterMaxSeconds or after the one retry, redirect to a host not in policy/sources.json, size or time cap, not text."
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "retryAfterSeconds": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "The Retry-After the host sent with a 429 or 503."
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "outcome": {
+                "const": "unchanged"
+              }
+            },
+            "required": [
+              "outcome"
+            ]
+          },
+          "then": {
+            "required": [
+              "finalUrl",
+              "httpStatus",
+              "sha256"
+            ]
+          },
+          "else": {
+            "required": [
+              "reason"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "outcome": {
+                "const": "changed"
+              }
+            },
+            "required": [
+              "outcome"
+            ]
+          },
+          "then": {
+            "required": [
+              "finalUrl",
+              "httpStatus",
+              "sha256"
+            ]
+          }
+        }
+      ]
+    },
+    "url": {
+      "type": "string",
+      "maxLength": 2000,
+      "pattern": "^https://[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+(/[!-~]*)?$"
+    },
+    "time": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](\\.[0-9]{1,9})?Z$"
+    },
+    "robots": {
+      "type": "object",
+      "required": [
+        "host",
+        "fetchedAt",
+        "verdict"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "host": {
+          "type": "string",
+          "pattern": "^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$"
+        },
+        "fetchedAt": {
+          "$ref": "#/$defs/time"
+        },
+        "httpStatus": {
+          "type": "integer",
+          "minimum": 100,
+          "maximum": 599
+        },
+        "verdict": {
+          "enum": [
+            "allowed",
+            "absent",
+            "disallowed",
+            "unreachable"
+          ],
+          "description": "allowed: robots.txt permits every path the run fetches from this host. absent: robots.txt answered 4xx, so no rule applies. disallowed: a rule forbids a path we fetch. unreachable: 5xx or a network error, treated as disallowed."
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "robots": {
+            "contains": {
+              "properties": {
+                "verdict": {
+                  "enum": [
+                    "disallowed",
+                    "unreachable"
+                  ]
+                }
+              },
+              "required": [
+                "verdict"
+              ]
+            }
+          }
+        },
+        "required": [
+          "robots"
+        ]
+      },
+      "then": {
+        "required": [
+          "aborted"
+        ]
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "aborted"
+        ]
+      },
+      "then": {
+        "properties": {
+          "results": {
+            "maxItems": 0
+          }
+        }
+      }
+    }
+  ]
+}

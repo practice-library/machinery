@@ -1,0 +1,13 @@
+{
+  "id": "plan.example.free",
+  "type": "plan",
+  "name": "plan.example.free",
+  "source": "https://docs.example.com/plans",
+  "measuredAt": "2026-09-02",
+  "attrs": {
+    "verdict": "allowed",
+    "fetched_at": "2026-09-02T10:00:00Z",
+    "quote": "The free plan includes 1,000 calls a month."
+  },
+  "edges": []
+}

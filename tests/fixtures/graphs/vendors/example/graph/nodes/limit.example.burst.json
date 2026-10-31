@@ -1,0 +1,13 @@
+{
+  "id": "limit.example.burst",
+  "type": "limit",
+  "name": "limit.example.burst",
+  "source": "https://docs.example.com/limits",
+  "measuredAt": "2026-09-01",
+  "attrs": {
+    "verdict": "allowed",
+    "fetched_at": "2026-09-01T10:00:00Z",
+    "quote": "Each key may send 20 requests per second."
+  },
+  "edges": []
+}

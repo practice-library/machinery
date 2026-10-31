@@ -1,0 +1,13 @@
+{
+  "id": "feature.example.fresh",
+  "type": "feature",
+  "name": "feature.example.fresh",
+  "source": "https://docs.example.com/features",
+  "measuredAt": "2026-10-30",
+  "attrs": {
+    "verdict": "allowed",
+    "fetched_at": "2026-10-30T10:00:00Z",
+    "quote": "Webhooks are available on every plan."
+  },
+  "edges": []
+}
