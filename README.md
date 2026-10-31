@@ -70,7 +70,7 @@ python3 -m unittest discover -s tests -t .   # no network: tests/__init__.py ref
 python3 tests/guards.py                      # removes each guard in turn; its test must then fail
 ```
 
-Python 3.9 or later, standard library only. HTTP responses are recorded under `tests/fixtures/http`, against example hosts. `tests/fixtures/graphs` is a small graphs checkout. Its `spec/refresh-report/schema.json` is a copy of that file in practice-library/graphs at `766ead28667144138af0203d26e8ee9d707f8eca`; CI validates the recorded report `tests/fixtures/expect/vendors-example.json` against it. The live workflow validates every report against the schema of the checkout it read.
+Python 3.9 or later, standard library only. HTTP responses are recorded under `tests/fixtures/http`, against example hosts. `tests/fixtures/graphs` is a small graphs checkout. Its `spec/refresh-report/schema.json` is a copy of `spec/refresh-report/schema.json` from practice-library/.github at the commit in `contract/pins.json`; CI checks that it is identical to that pinned file, and validates the recorded report `tests/fixtures/expect/vendors-example.json` against it. The live workflow validates every report against the schema of the checkout it read.
 
 ## Checks
 

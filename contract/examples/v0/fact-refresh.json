@@ -814,6 +814,50 @@
       ],
       "notReached": []
      }
+    },
+    {
+     "name": "robots.txt answering 429 recorded as absent (the report schema requires unreachable)",
+     "instance": {
+      "unit": "host:docs.example.com",
+      "shardKey": "docs.example.com",
+      "requests": 2,
+      "robots": {
+       "host": "docs.example.com",
+       "fetchedAt": "2026-10-31T12:00:01Z",
+       "httpStatus": 429,
+       "verdict": "absent"
+      },
+      "results": [],
+      "notReached": [
+       "rule.example.a"
+      ]
+     }
+    },
+    {
+     "name": "a robots.txt time on a date that does not exist",
+     "instance": {
+      "unit": "host:docs.example.com",
+      "shardKey": "docs.example.com",
+      "requests": 2,
+      "robots": {
+       "host": "docs.example.com",
+       "fetchedAt": "2026-02-31T12:00:01Z",
+       "httpStatus": 200,
+       "verdict": "allowed"
+      },
+      "results": [
+       {
+        "node": "rule.example.a",
+        "source": "https://docs.example.com/a",
+        "fetchedAt": "2026-10-31T12:00:03Z",
+        "outcome": "unchanged",
+        "finalUrl": "https://docs.example.com/a",
+        "httpStatus": 200,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+       }
+      ],
+      "notReached": []
+     }
     }
    ]
   },

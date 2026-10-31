@@ -80,6 +80,12 @@ jobs:
           schema="pinned/$(jq -r '.refreshReport.path' contract/pins.json)"
           test "$(jq -r '."$id"' "$schema")" = "$(jq -r '.refreshReport.id' contract/pins.json)"
           cmp "$schema" tests/fixtures/graphs/spec/refresh-report/schema.json
+          repo="$(jq -r '.refreshReport.repository' contract/pins.json)"
+          tag="$(jq -r '.refreshReport.tag' contract/pins.json)"
+          commit="$(jq -r '.refreshReport.commit' contract/pins.json)"
+          # the tag must name the pinned commit (an annotated tag through its peeled ^{} line)
+          named="$(git ls-remote "https://github.com/$repo" "refs/tags/$tag" "refs/tags/$tag^{}" | sort -k2 | awk 'END {print $1}')"
+          test "$named" = "$commit" || { echo "::error file=contract/pins.json::tag $tag names $named, not $commit"; exit 1; }
           echo "REPORT_SCHEMA=$schema" >> "$GITHUB_ENV"
       - name: Every schema example validates, every counter-example is rejected
         run: python3 contract/check_examples.py --validator jsonschema --report-schema "$REPORT_SCHEMA"
