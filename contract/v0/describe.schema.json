@@ -2,44 +2,131 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/practice-library/machinery/contract/v0/describe.schema.json",
   "title": "describe data, contract v0",
-  "description": "What a plugin is and what it can do. A gateway reads it before sending any other verb.",
+  "description": "What a plugin is and what it can do. A gateway reads it before sending any other verb. A tool that already prints a manifest of its own conforms by mapping its fields to these; the envelope stays {ok, data, notRead, warnings}.",
   "type": "object",
-  "required": ["name", "version", "contract", "contracts", "job", "verbs"],
+  "required": [
+    "name",
+    "version",
+    "protocol",
+    "contracts",
+    "job",
+    "verbs"
+  ],
   "additionalProperties": false,
   "properties": {
-    "name": {"type": "string", "pattern": "^[a-z][a-z0-9-]*$"},
-    "version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
-    "contract": {"type": "string", "pattern": "^[0-9]+$", "description": "The contract version this answer is written in: the version of the request."},
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "protocol": {
+      "type": "string",
+      "pattern": "^[0-9]+$",
+      "description": "The contract version this answer is written in: the request's contract."
+    },
     "contracts": {
       "type": "array",
-      "description": "Contract versions the plugin speaks.",
+      "description": "Every value of a request's contract the plugin accepts.",
       "minItems": 1,
-      "items": {"type": "string", "pattern": "^[0-9]+$"}
+      "items": {
+        "type": "string",
+        "pattern": "^[0-9]+$"
+      }
     },
-    "job": {"type": "string", "pattern": "^[a-z][a-z0-9-]*$", "description": "The job the plugin performs, which names the schema of its verbs' inputs and outputs (for example fact-refresh)."},
+    "job": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$",
+      "description": "The job the plugin performs, which names the schema of its verbs' inputs and outputs (for example fact-refresh)."
+    },
     "verbs": {
-      "type": "object",
-      "description": "Every verb the plugin answers besides describe. A shardable job answers plan, run-unit and merge; a job that is not shardable answers run.",
-      "additionalProperties": false,
-      "properties": {
-        "plan": {"$ref": "#/$defs/verb"},
-        "run-unit": {"$ref": "#/$defs/verb"},
-        "merge": {"$ref": "#/$defs/verb"},
-        "run": {"$ref": "#/$defs/verb"}
+      "type": "array",
+      "minItems": 1,
+      "description": "Every verb the plugin answers besides describe, each with the $id of the schema of its input and of its output. A shardable job answers plan, run-unit and merge; a job that is not shardable answers run. Each name appears once.",
+      "items": {
+        "$ref": "#/$defs/verb"
       },
       "anyOf": [
-        {"required": ["plan", "run-unit", "merge"]},
-        {"required": ["run"]}
+        {
+          "allOf": [
+            {
+              "contains": {
+                "properties": {
+                  "name": {
+                    "const": "plan"
+                  }
+                }
+              }
+            },
+            {
+              "contains": {
+                "properties": {
+                  "name": {
+                    "const": "run-unit"
+                  }
+                }
+              }
+            },
+            {
+              "contains": {
+                "properties": {
+                  "name": {
+                    "const": "merge"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "contains": {
+            "properties": {
+              "name": {
+                "const": "run"
+              }
+            }
+          }
+        }
       ]
     }
   },
   "$defs": {
     "verb": {
       "type": "object",
-      "required": ["shardable"],
+      "required": [
+        "name",
+        "shardable",
+        "input",
+        "output"
+      ],
       "additionalProperties": false,
       "properties": {
-        "shardable": {"type": "boolean", "description": "Whether a gateway may run several calls of this verb in parallel, one per work unit."}
+        "name": {
+          "enum": [
+            "plan",
+            "run-unit",
+            "merge",
+            "run"
+          ]
+        },
+        "shardable": {
+          "type": "boolean",
+          "description": "Whether a gateway may run several calls of this verb in parallel, one per work unit."
+        },
+        "input": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https://",
+          "description": "The $id (with a #/$defs/ fragment where it names a definition) of the schema the verb's input matches."
+        },
+        "output": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https://",
+          "description": "The $id of the schema the verb's data matches."
+        }
       }
     }
   }

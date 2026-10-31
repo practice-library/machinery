@@ -6,7 +6,8 @@ result); merge (the plan and every partial result to one refresh report). The jo
 no run verb.
 
 Exit codes: 0 the verb succeeded; 1 the verb failed on a valid request; 2 the request is not a valid
-contract v0 request; 3 the request's contract version is not one this plugin speaks.
+contract v0 request; 3 the request's contract version is not one this plugin speaks; 75 a temporary failure,
+the caller may retry the same request later (here: robots.txt answered 429 Too Many Requests).
 """
 from __future__ import annotations
 
@@ -26,7 +27,7 @@ NAME = "fact-refresh-python"
 VERSION = "0.1.0"
 CONTRACTS = ["0"]
 MAX_PARALLEL = 3  # never more than this many run-unit calls at once
-OK, FAILED, BAD_REQUEST, UNSUPPORTED = 0, 1, 2, 3
+OK, FAILED, BAD_REQUEST, UNSUPPORTED, TEMPFAIL = 0, 1, 2, 3, 75  # 75: sysexits EX_TEMPFAIL
 
 
 class Refused(Exception):
@@ -71,10 +72,18 @@ class ReplayTransport:
 
 
 # -- verbs ---------------------------------------------------------------------------------------------------
+JOB_SCHEMA = "https://github.com/practice-library/machinery/contract/v0/fact-refresh.schema.json"
+REPORT_SCHEMA = "https://github.com/practice-library/graphs/spec/refresh-report/schema.json"
+
+
 def describe() -> Tuple[dict, list]:
     return {
-        "name": NAME, "version": VERSION, "contract": CONTRACTS[0], "contracts": CONTRACTS, "job": "fact-refresh",
-        "verbs": {"plan": {"shardable": False}, "run-unit": {"shardable": True}, "merge": {"shardable": False}},
+        "name": NAME, "version": VERSION, "protocol": CONTRACTS[0], "contracts": CONTRACTS, "job": "fact-refresh",
+        "verbs": [
+            {"name": "plan", "shardable": False, "input": f"{JOB_SCHEMA}#/$defs/planInput", "output": f"{JOB_SCHEMA}#/$defs/plan"},
+            {"name": "run-unit", "shardable": True, "input": f"{JOB_SCHEMA}#/$defs/unit", "output": f"{JOB_SCHEMA}#/$defs/partial"},
+            {"name": "merge", "shardable": False, "input": f"{JOB_SCHEMA}#/$defs/mergeInput", "output": REPORT_SCHEMA},
+        ],
     }, []
 
 
@@ -163,6 +172,10 @@ def run_unit(unit: dict, network: Optional[dict], caps: dict) -> Tuple[dict, lis
     partial = {"unit": unit["id"], "shardKey": unit["shardKey"], "requests": rep["requests"],
                "robots": rep["robots"][0] if rep["robots"] else None, "results": rep["results"],
                "notReached": [f["node"] for f in unit["facts"] if f["node"] not in {r["node"] for r in rep["results"]}]}
+    if partial["robots"] is not None and partial["robots"].get("httpStatus") == 429:
+        # the host asked us to slow down before any page was read: nothing was decided, so the unit is
+        # retried later rather than aborting the whole report
+        raise Refused(TEMPFAIL, f"robots.txt of {h['host']} answered 429 Too Many Requests; retry the unit later")
     if "aborted" in rep:
         partial["aborted"] = rep["aborted"]
     not_read = [{"what": node, "why": why} for _, node, why in refresher.skipped]

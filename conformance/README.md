@@ -10,7 +10,7 @@ python3 conformance/run.py --plugin /abs/path/to/plugin \
 
 For each case it checks the process:
 - **time:** the plugin ends within `caps.timeSeconds`, plus 2 seconds for process start, or it is killed and the case fails;
-- **exit code:** one of 0, 1, 2 and 3, the one the case expects, and 0 exactly when `ok` is true;
+- **exit code:** one of 0, 1, 2, 3 and 75, the one the case expects, and 0 exactly when `ok` is true;
 - **output:** at most `caps.outputBytes` on stdout, the newline included, and at most 65536 bytes on stderr;
 - **one answer:** stdout is one JSON value followed by one newline, with nothing before or after it (no log line, no second answer, no cut-off line).
 
@@ -19,7 +19,7 @@ Then the answer:
 - **expected data:** a subset match. Keys a case does not name are not compared, and `{"$startsWith": ...}` and `{"$absent": true}` match a prefix or a missing key.
 
 These invariants hold for every answer:
-- **describe:** it answers in the contract version it was asked in.
+- **describe:** it answers in the contract version it was asked in, and names each verb once.
 - **plan:** the budgets add up to at most `maxRequestsPerRun`, and `maxParallel` is at most 3.
 - **run-unit:** requests are at most the unit's budget. Unless the unit aborted, `results` and `notReached` name each fact of the unit exactly once.
 - **merge:** every fact of a unit without a partial result is in the report. A fact of a unit with one is in the report unless the partial says it was not reached, and then it is not. No fact is `unchanged` unless its partial result says so.
@@ -28,7 +28,7 @@ What the runner cannot check: that a plugin reads no files, environment or secre
 
 The runner's own checks are tested against plugins that break them one way each (`tests/fixtures/plugins/bad.py`, `tests/test_runner.py`), and each check is mutated in `tests/guards.py`.
 
-The runner exits 0 only when every case passes. The Python plugin of this repository (`bin/fact-refresh-plugin`) passes all 58 cases in CI. A plugin that extracts text by replacing every tag with a space (`tests/fixtures/plugins/naive.py`) fails 13: the 12 design-review cases and the table-row case.
+The runner exits 0 only when every case passes. The Python plugin of this repository (`bin/fact-refresh-plugin`) passes all 59 cases in CI. A plugin that extracts text by replacing every tag with a space (`tests/fixtures/plugins/naive.py`) fails 13: the 12 design-review cases and the table-row case.
 
 ## Cases
 
@@ -50,7 +50,7 @@ One file per group. Each file has a `verb`, `defaults` (a request that each case
 - `run-unit-safety.json` (a fact the budget does not reach is in `notReached`):
   - unchanged and changed;
   - `$10` not found in `$100`;
-  - robots.txt disallowing a path, or answering 503;
+  - robots.txt disallowing a path, or answering 503 (the report aborts), or 429 (exit 75, retried later);
   - 500, and 429 with a long `Retry-After`, never a verdict;
   - a redirect to an unlisted host;
   - a budget of 2;

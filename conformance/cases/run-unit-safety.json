@@ -292,6 +292,39 @@
    }
   },
   {
+   "name": "robots.txt answering 429 is exit 75: a temporary failure, retried later, not an abort",
+   "request": {
+    "network": {
+     "replay": {
+      "exchanges": {
+       "https://docs.example.com/robots.txt": [
+        {
+         "status": 429,
+         "headers": {
+          "retry-after": "60"
+         },
+         "body": ""
+        }
+       ],
+       "https://docs.example.com/a": [
+        {
+         "status": 200,
+         "headers": {
+          "content-type": "text/html; charset=utf-8"
+         },
+         "body": "<p>Each key may send <b>20</b> requests per second.</p>"
+        }
+       ]
+      }
+     }
+    }
+   },
+   "expect": {
+    "exit": 75,
+    "ok": false
+   }
+  },
+  {
    "name": "a 500 is unreadable, never changed",
    "request": {
     "network": {

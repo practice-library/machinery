@@ -7,8 +7,8 @@ jsonschema CLI when --validator is given.
       [--validator jsonschema] [--cases conformance/cases]
 
 What it checks of every answer, as a black box:
-  process  the plugin ends within caps.timeSeconds (plus GRACE_SECONDS for process start); exits 0, 1, 2
-           or 3, the code the case expects, and 0 exactly when ok is true; writes at most caps.outputBytes
+  process  the plugin ends within caps.timeSeconds (plus GRACE_SECONDS for process start); exits 0, 1, 2,
+           3 or 75, the code the case expects, and 0 exactly when ok is true; writes at most caps.outputBytes
            to stdout, the newline included, and at most STDERR_BYTES to stderr; stdout is one JSON value
            and one newline, nothing before or after it;
   schemas  with --validator: every request against the request schema, the envelope, and the verb's data
@@ -19,7 +19,7 @@ What it checks of every answer, as a black box:
            exactly once, unless the unit aborted;
   merge    every fact of the plan is in the report unless a partial says it was not reached or the
            report is aborted; no fact is unchanged without a partial result that says so;
-  describe it answers in the contract version it was asked in.
+  describe it answers in the contract version it was asked in, and names each verb once.
 What it cannot check: that the plugin reads no files, environment or secrets, and opens no connection.
 Those are properties of where it runs (the caller's CI job), not of its answers.
 Exit 0 when every case passes, 1 otherwise.
@@ -38,7 +38,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 CONTRACT = os.path.join(os.path.dirname(HERE), "contract", "v0")
 FACT = "https://github.com/practice-library/machinery/contract/v0/fact-refresh.schema.json"
 INPUT_DEF = {"plan": "planInput", "run-unit": "unit", "merge": "mergeInput"}
-EXIT_CODES = (0, 1, 2, 3)
+EXIT_CODES = (0, 1, 2, 3, 75)  # 75: a temporary failure, the caller may retry
 GRACE_SECONDS = 2  # for process start; the plugin itself has caps.timeSeconds
 STDERR_BYTES = 65536  # stderr is for people; a flood is a failure
 DEFAULT_CAPS = {"timeSeconds": 30, "outputBytes": 1 << 20}
@@ -126,8 +126,11 @@ def invariants(verb, request, data):
         if "aborted" not in data and sorted(said) != sorted(allowed):
             return "run-unit: results and notReached do not name each fact of the unit exactly once"
     elif verb == "describe":
-        if data.get("contract") != request.get("contract"):
-            return f"describe: answers in contract {data.get('contract')!r}, asked in {request.get('contract')!r}"
+        if data.get("protocol") != request.get("contract"):
+            return f"describe: answers in contract {data.get('protocol')!r}, asked in {request.get('contract')!r}"
+        names = [v.get("name") for v in data.get("verbs", [])]
+        if len(set(names)) != len(names):
+            return f"describe: a verb is named twice: {names}"
     elif verb == "merge":
         if "aborted" in data:
             return None

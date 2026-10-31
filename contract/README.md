@@ -26,12 +26,13 @@ Exit codes:
 | 1 | the verb failed on a valid request (for example, a merge given two partial results for one unit, or an answer larger than `outputBytes`) |
 | 2 | the request is not a valid request (not JSON, no caps, unknown verb, an input that does not match) |
 | 3 | the request's `contract` is a version the plugin does not speak |
+| 75 | a temporary failure: the caller may retry the same request later (`EX_TEMPFAIL` of sysexits) |
 
 The caller sets `caps.timeSeconds` and `caps.outputBytes`. The plugin starts no work that could outlast the time cap, and never writes more than `outputBytes` to stdout, the newline included. That holds even for a request it refuses: when `outputBytes` is smaller than the smallest failure envelope, it writes nothing. The caller kills it after `timeSeconds`, and refuses a larger output.
 
 ## Verbs
 
-- **`describe`:** returns the plugin's name and version, the contract version of the answer (`contract`), every contract version it speaks (`contracts`), its job, and every verb with whether it is shardable (`v0/describe.schema.json`).
+- **`describe`:** returns the plugin's name and version, the contract version of the answer (`protocol`), every contract version it accepts (`contracts`), its job, and the list of its verbs. Each verb carries whether it is shardable and the `$id` of its input and output schemas (`v0/describe.schema.json`). A tool that already prints a manifest of its own conforms by mapping its fields to these; the envelope stays `{ok, data, notRead, warnings}`.
 - **A shardable job** answers `plan`, `run-unit` and `merge`. A job that is not shardable answers a single `run`. For the fact-refresh job, `run` takes the same input as `plan` and returns the report (`runInput`, `runData`); this repository's plugin is shardable and does not answer it.
 
 For the `fact-refresh` job (`v0/fact-refresh.schema.json`):
@@ -47,7 +48,8 @@ For the `fact-refresh` job (`v0/fact-refresh.schema.json`):
 - **`run-unit`:** one unit becomes a partial result:
   - robots.txt of its host first;
   - then its pages, within the budget and pacing;
-  - one result per fact reached, in the report's result shape, and every fact not reached in `notReached`.
+  - one result per fact reached, in the report's result shape, and every fact not reached in `notReached`;
+  - if robots.txt answers 429 Too Many Requests, no result at all: exit 75, and the caller retries the unit later. A unit that is never retried has no partial result, so its facts are `unreadable`.
 - **`merge`:** the plan and every partial result become one refresh report.
 
 A quote is `{"text": ...}`, found as a whole in the page's text, or `{"cells": [...]}`, found as consecutive whole cells of one table row on the page. `plan` turns a stored quote written as a markdown table row (`| a | b |`) into cells, because that form never appears in a page's text.
@@ -77,6 +79,6 @@ Version 0 may still change. From version 1 on, a contract version changes only a
 - never a removed or renamed field, a field made required, a narrower range or pattern, a new value in an enum an older caller reads, or a changed meaning of an exit code;
 - anything else is a new major version, and a plugin answers a version it does not speak with exit 3.
 
-A request names its version in `contract`; `describe` answers with the version it was asked in and lists every version it speaks. Before version 1, the framing of version 0 may still change to be compatible with JSON-RPC 2.0.
+A request names its version in `contract`; `describe` answers with the version it was asked in (`protocol`) and lists every version it accepts. Before version 1, the framing of version 0 may still change to be compatible with JSON-RPC 2.0.
 
 Not here yet: the gateway (step 2: a reusable matrix workflow in practice-library/.github that runs `plan`, one `run-unit` job per unit with `max-parallel` at most 3, and `merge`), and the Python plugin in its own repository (step 3).

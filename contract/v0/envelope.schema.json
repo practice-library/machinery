@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/practice-library/machinery/contract/v0/envelope.schema.json",
   "title": "Plugin response envelope, contract v0",
-  "description": "Every response a plugin writes to stdout: exactly one JSON object of this shape, and nothing else. ok is false when the verb failed; data is then null and warnings says why.",
+  "description": "Every response a plugin writes to stdout: exactly one JSON object of this shape, and nothing else. ok is false when the verb failed; data is then null and warnings says why. The exit code goes with it: 0 with ok true; 1, 2, 3 or 75 (a temporary failure: the caller may retry the same request later) with ok false.",
   "type": "object",
   "required": ["ok", "data", "notRead", "warnings"],
   "additionalProperties": false,

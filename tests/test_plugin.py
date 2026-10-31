@@ -126,6 +126,21 @@ class RunUnit(unittest.TestCase):
         self.assertEqual(self.unit(39, n_pages=2)["notReached"], [])
         self.assertEqual(self.unit(34)["notReached"], ["rule.example.p0", "rule.example.p1", "rule.example.p2"])
 
+    def robots_answers(self, status):
+        req = case("run-unit-safety.json", "both quotes on their pages: unchanged, one request per page after robots.txt")
+        req["network"]["replay"]["exchanges"]["https://docs.example.com/robots.txt"] = [
+            {"status": status, "headers": {"retry-after": "60"}, "body": ""}]
+        return call(req)
+
+    def test_robots_429_is_a_temporary_failure_and_503_aborts(self):
+        code, env = self.robots_answers(429)
+        self.assertEqual((code, env["ok"]), (75, False))
+        self.assertIn("429 Too Many Requests", env["warnings"][0])
+        for status, aborted in ((428, False), (430, False), (503, True)):  # a 4xx is no robots.txt; a 5xx aborts
+            code, env = self.robots_answers(status)
+            self.assertEqual(code, 0, status)
+            self.assertEqual("aborted" in env["data"], aborted, status)
+
     def test_the_units_host_must_be_in_network_hosts(self):
         req = case("run-unit-safety.json", "both quotes on their pages: unchanged, one request per page after robots.txt")
         req["network"] = {"hosts": ["other.example.com"]}
@@ -351,7 +366,11 @@ class Boundary(unittest.TestCase):
 
     def test_describe_answers_in_the_contract_it_was_asked_in(self):
         _, env = call({"contract": "0", "verb": "describe", "caps": CAPS})
-        self.assertEqual(env["data"]["contract"], "0")
+        self.assertEqual(env["data"]["protocol"], "0")
+        job = "https://github.com/practice-library/machinery/contract/v0/fact-refresh.schema.json#/$defs/"
+        self.assertEqual([(v["name"], v["input"], v["output"]) for v in env["data"]["verbs"]],
+                         [("plan", job + "planInput", job + "plan"), ("run-unit", job + "unit", job + "partial"),
+                          ("merge", job + "mergeInput", "https://github.com/practice-library/graphs/spec/refresh-report/schema.json")])
 
 
 class Cells(unittest.TestCase):

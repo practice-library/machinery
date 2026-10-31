@@ -23,10 +23,10 @@ def sized(total):
     return json.dumps(dict(envelope, warnings=["w" * (total - base)]), separators=(",", ":")).encode() + b"\n"
 
 
-if way == "stdout-at-cap":  # the case's outputBytes is 1024
-    out = sized(1024)
+if way == "stdout-at-cap":  # the case's outputBytes is 4096
+    out = sized(4096)
 elif way == "stdout-one-over":
-    out = sized(1025)
+    out = sized(4097)
 elif way == "stderr-at-cap":
     sys.stderr.buffer.write(b"e" * 65536)
 elif way == "stderr-one-over":
@@ -49,7 +49,9 @@ elif way == "exit-4":  # the case expects 4, so only the check of the four codes
 elif way == "ok-on-failure":  # exit 1 with ok true; the case expects exit 1
     code = 1
 elif way == "wrong-contract":  # describe answers in a contract it was not asked in
-    out = json.dumps(dict(envelope, data=dict(data, contract="7")), separators=(",", ":")).encode() + b"\n"
+    out = json.dumps(dict(envelope, data=dict(data, protocol="7")), separators=(",", ":")).encode() + b"\n"
+elif way == "verb-twice":
+    out = json.dumps(dict(envelope, data=dict(data, verbs=data["verbs"] + data["verbs"][:1])), separators=(",", ":")).encode() + b"\n"
 elif way != "good":
     sys.exit(f"unknown way {way}")
 sys.stdout.buffer.write(out)

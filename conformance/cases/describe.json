@@ -11,25 +11,34 @@
  },
  "cases": [
   {
-   "name": "describe names contract 0 and the three shardable verbs",
+   "name": "describe names contract 0 and the three shardable verbs, each with its schemas",
    "expect": {
     "data": {
      "contracts": [
       "0"
      ],
      "job": "fact-refresh",
-     "verbs": {
-      "plan": {
-       "shardable": false
+     "verbs": [
+      {
+       "name": "plan",
+       "shardable": false,
+       "input": "https://github.com/practice-library/machinery/contract/v0/fact-refresh.schema.json#/$defs/planInput",
+       "output": "https://github.com/practice-library/machinery/contract/v0/fact-refresh.schema.json#/$defs/plan"
       },
-      "run-unit": {
-       "shardable": true
+      {
+       "name": "run-unit",
+       "shardable": true,
+       "input": "https://github.com/practice-library/machinery/contract/v0/fact-refresh.schema.json#/$defs/unit",
+       "output": "https://github.com/practice-library/machinery/contract/v0/fact-refresh.schema.json#/$defs/partial"
       },
-      "merge": {
-       "shardable": false
+      {
+       "name": "merge",
+       "shardable": false,
+       "input": "https://github.com/practice-library/machinery/contract/v0/fact-refresh.schema.json#/$defs/mergeInput",
+       "output": "https://github.com/practice-library/graphs/spec/refresh-report/schema.json"
       }
-     },
-     "contract": "0"
+     ],
+     "protocol": "0"
     }
    }
   },

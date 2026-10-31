@@ -21,7 +21,7 @@ def run(way, exit_code=0, ok=True):
     with tempfile.TemporaryDirectory() as cases:
         with open(os.path.join(cases, "describe.json"), "w") as f:
             json.dump({"verb": "describe",
-                       "defaults": {"contract": "0", "verb": "describe", "caps": {"timeSeconds": 1, "outputBytes": 1024}},
+                       "defaults": {"contract": "0", "verb": "describe", "caps": {"timeSeconds": 1, "outputBytes": 4096}},
                        "cases": [{"name": "describe", "expect": {"exit": exit_code, "ok": ok}}]}, f)
         out = subprocess.run([sys.executable, os.path.join(ROOT, "conformance", "run.py"), "--plugin", sys.executable, BAD, way,
                               "--report-schema", os.devnull, "--cases", cases], capture_output=True, text=True, timeout=60)
@@ -42,7 +42,7 @@ class Runner(unittest.TestCase):
         self.assertEqual(run("stdout-at-cap")[0], 0)
 
     def test_stdout_one_byte_over_output_bytes(self):
-        self.fails("stdout-one-over", "stdout is 1025 bytes, over outputBytes (1024)")
+        self.fails("stdout-one-over", "stdout is 4097 bytes, over outputBytes (4096)")
 
     def test_stderr_at_its_cap_passes(self):
         self.assertEqual(run("stderr-at-cap")[0], 0)
@@ -69,10 +69,13 @@ class Runner(unittest.TestCase):
         self.fails("two-answers", "has more after its JSON value")
 
     def test_an_exit_code_outside_the_four(self):
-        self.fails("exit-4", "exit 4, not one of (0, 1, 2, 3)", exit_code=4, ok=False)
+        self.fails("exit-4", "exit 4, not one of (0, 1, 2, 3, 75)", exit_code=4, ok=False)
 
     def test_ok_true_on_a_failure_exit(self):
         self.fails("ok-on-failure", "ok is true exactly on exit 0", exit_code=1, ok=True)
+
+    def test_describe_naming_a_verb_twice(self):
+        self.fails("verb-twice", "describe: a verb is named twice")
 
     def test_describe_in_another_contract(self):
         self.fails("wrong-contract", "describe: answers in contract '7', asked in '0'")
