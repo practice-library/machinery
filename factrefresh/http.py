@@ -62,8 +62,13 @@ class UrllibTransport:
         finally:
             resp.close()
         hdrs = {k.lower(): v for k, v in (resp.headers.items() if resp.headers else [])}
-        return Response(status=resp.status if hasattr(resp, "status") else resp.code,
-                        headers=hdrs, body=body[:max_bytes], truncated=len(body) > max_bytes)
+        status = resp.status if hasattr(resp, "status") else resp.code
+        declared = hdrs.get("content-length", "").strip()
+        if 200 <= status < 300 and declared.isdigit() and len(body) <= max_bytes and len(body) < int(declared):
+            # The connection closed before the declared length: a cut-off page, which must never be read as
+            # a page whose quote is gone. (http.client's read1 returns the short body without an error.)
+            raise TransportError(f"the body ended after {len(body)} of the {declared} bytes Content-Length declares")
+        return Response(status=status, headers=hdrs, body=body[:max_bytes], truncated=len(body) > max_bytes)
 
     def _read(self, resp, limit: int, deadline: float, timeout: float) -> bytes:
         read = getattr(resp, "read1", None) or resp.read

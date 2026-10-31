@@ -167,6 +167,26 @@ GUARDS = [
     ("the left-out list reaches the output", "factrefresh/__main__.py",
      "if notes:\n        lines +=", "if False:\n        lines +=",
      "tests.test_cli.RefreshSummary.test_facts_left_out_of_the_report_are_listed_in_the_output_and_the_step_summary"),
+    # issue 3 gaps
+    ("a body shorter than its Content-Length is a transport error", "factrefresh/http.py",
+     "and len(body) < int(declared):", "and False:",
+     "tests.test_http.Gaps.test_a_body_shorter_than_its_content_length_is_unreachable"),
+    ("a URL of 2001 characters is not plain", R,
+     "return len(url) <= URL_MAX_LENGTH and URL_RE.fullmatch(url) is not None",
+     "return len(url) <= URL_MAX_LENGTH + 1 and URL_RE.fullmatch(url) is not None",
+     f"{T}.SchemaUrl.test_a_url_one_character_over_the_schema_length_is_not_plain"),
+    ("a robots.txt redirect target must be a plain https URL", R,
+     "if plain_url(target) else None", "if True else None",
+     f"{T}.SchemaUrl.test_a_robots_txt_redirect_to_a_url_that_is_not_plain_https_is_not_followed"),
+    ("a stall late in the budget waits only for the time left", "factrefresh/http.py",
+     "self._sock.settimeout(left)", "pass",
+     "tests.test_http.Gaps.test_a_stall_late_in_the_budget_waits_only_for_the_time_left"),
+    ("a mid-body timeout is a transport error", "factrefresh/http.py",
+     "except (socket.timeout, ConnectionError, OSError) as err:", "except ConnectionError as err:",
+     "tests.test_http.Gaps.test_a_timeout_in_the_middle_of_the_body_is_a_transport_error"),
+    ("a mid-body OSError is a transport error", "factrefresh/http.py",
+     "except (socket.timeout, ConnectionError, OSError) as err:", "except (socket.timeout, ConnectionError) as err:",
+     "tests.test_http.Gaps.test_an_os_error_in_the_middle_of_the_body_is_a_transport_error"),
 ]
 
 
