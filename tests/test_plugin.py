@@ -390,11 +390,11 @@ class Boundary(unittest.TestCase):
             self.assertIn(why, env["warnings"][0], stdin[:60])
 
     def test_the_executable_reads_bytes_so_bad_utf8_is_exit_2(self):
-        # the byte sits in a string a request may carry, so a text stdin (strict: exit 1; surrogateescape,
-        # as Python uses under a C locale: exit 0) cannot pass for reading bytes
+        # a text stdin with strict errors fails while reading (exit 1); reading bytes refuses it as exit 2.
+        # PYTHONIOENCODING sets the text stdin's error handler the same way on every OS and locale.
         stdin = (b'{"contract": "0", "verb": "describe", "caps": {"timeSeconds": 60, "outputBytes": 1048576}, '
                  b'"network": {"replay": {"start": "2026-10-31T12:00:00Z", "exchanges": {"https://a.example.com/": [{"status": 200, "body": "\xff"}]}}}}')
-        for env in ({"LC_ALL": "C.UTF-8"}, {"LC_ALL": "C", "PYTHONUTF8": "0", "PYTHONCOERCECLOCALE": "0"}):
+        for env in ({"PYTHONIOENCODING": "utf-8:strict"}, {"PYTHONIOENCODING": "utf-8:surrogateescape"}):
             out = subprocess.run([os.path.join(ROOT, "bin", "fact-refresh-plugin")], input=stdin, capture_output=True,
                                  env=dict(os.environ, **env))
             self.assertEqual(out.returncode, 2, (env, out.stderr))
