@@ -184,7 +184,7 @@ class Unreachable(unittest.TestCase):
         self.assertEqual(by_node(run(recorded=rec)[0])["plan.example.free"]["outcome"], "unreadable")
 
 
-class Rework(unittest.TestCase):
+class Hardening(unittest.TestCase):
     def test_an_empty_stored_quote_is_unreadable_never_unchanged(self):
         with GraphsCopy() as root:
             path = os.path.join(root, "vendors/example/graph/nodes/limit.example.burst.json")

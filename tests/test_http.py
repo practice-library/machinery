@@ -73,11 +73,12 @@ class TotalDeadline(unittest.TestCase):
 
 
 class Body:
-    """A response whose body is `data`, handed over in one read."""
+    """A response whose body is `data`, handed over in one read. Not an http.client response: its headers
+    are a plain dict and it has no `chunked` flag."""
 
-    def __init__(self, data):
-        self.status, self.headers, self.fp = 200, {"content-type": "text/plain"}, None
-        self.fp = type("Fp", (), {})()
+    def __init__(self, data, headers=None, status=200):
+        self.status, self.fp = status, type("Fp", (), {})()
+        self.headers = headers if headers is not None else {"content-type": "text/plain"}
         self._data = data
 
     def read1(self, n):
@@ -251,7 +252,7 @@ class ContentLength(unittest.TestCase):
         self.assertEqual(got.body, b"hello")
 
     def test_a_content_length_that_is_not_plain_digits_is_a_transport_error(self):
-        for value in (b"+5", b"-1", b"abc", b"5, 5"):
+        for value in (b"+5", b"-1", b"abc", b"5,", b"5,,5", b"5 5"):
             with self.subTest(value=value):
                 got, _, _ = through_urllib([OK_HEAD + b"Content-Length: " + value + b"\r\n\r\n", b"hello"],
                                            per_read=0.01)
@@ -305,3 +306,81 @@ class ContentLengthBoundaries(unittest.TestCase):
     def test_whitespace_around_a_content_length_is_not_malformed(self):
         got, _, _ = through_urllib([OK_HEAD + b"Content-Length:   5  \r\n\r\n", b"hello"], per_read=0.01)
         self.assertEqual(got.body, b"hello")
+
+
+
+def ok_with(*header_lines, body=b"hello", status=b"HTTP/1.1 200 OK\r\n"):
+    head = status + b"Content-Type: text/plain\r\n" + b"".join(h + b"\r\n" for h in header_lines) + b"\r\n"
+    got, _, _ = through_urllib([head, body] if body else [head], per_read=0.01)
+    return got
+
+
+class ContentLengthValues(unittest.TestCase):
+    def test_a_5000_digit_content_length_is_a_transport_error_not_a_crash(self):
+        got = ok_with(b"Content-Length: " + b"9" * 5000)
+        self.assertIsInstance(got, TransportError)
+        self.assertIn("5 of the 99999999999999999999... bytes", str(got))
+
+    def test_leading_zeros_do_not_change_the_number(self):
+        got = ok_with(b"Content-Length: " + b"0" * 4999 + b"5")
+        self.assertEqual(got.body, b"hello")
+
+    def test_05_and_5_are_the_same_number(self):
+        got = ok_with(b"Content-Length: 05", b"Content-Length: 5")
+        self.assertEqual(got.body, b"hello")
+
+    def test_a_list_of_identical_values_is_accepted(self):
+        self.assertEqual(ok_with(b"Content-Length: 5, 5").body, b"hello")
+        self.assertEqual(ok_with(b"Content-Length: 5,5,05").body, b"hello")
+
+    def test_a_list_of_different_values_is_conflicting(self):
+        got = ok_with(b"Content-Length: 5, 6")
+        self.assertIsInstance(got, TransportError)
+        self.assertIn("conflicting", str(got))
+
+
+class NoContentStatuses(unittest.TestCase):
+    def test_204_with_a_content_length_is_not_rejected(self):
+        got = ok_with(b"Content-Length: 10", body=b"", status=b"HTTP/1.1 204 No Content\r\n")
+        self.assertNotIsInstance(got, TransportError, str(got))
+        self.assertEqual(got.status, 204)
+
+    def test_205_with_a_content_length_is_not_rejected(self):
+        got = ok_with(b"Content-Length: 10", body=b"", status=b"HTTP/1.1 205 Reset Content\r\n")
+        self.assertNotIsInstance(got, TransportError, str(got))
+        self.assertEqual(got.status, 205)
+
+    def test_203_and_206_are_still_checked(self):
+        for line in (b"HTTP/1.1 203 Non-Authoritative Information\r\n", b"HTTP/1.1 206 Partial Content\r\n"):
+            with self.subTest(status=line):
+                self.assertIsInstance(ok_with(b"Content-Length: 10", status=line), TransportError)
+
+
+class FallbackHeaders(unittest.TestCase):
+    """A response that is not from http.client (plain dict headers, no chunked flag)."""
+
+    def get(self, headers, body=b"hello"):
+        t = UrllibTransport(opener=Opener(Body(body, headers=headers)), monotonic=lambda: 0.0)
+        try:
+            return t.get("https://docs.example.com/x", {}, timeout=30, max_bytes=1000)
+        except TransportError as err:
+            return err
+
+    def test_exactly_chunked_skips_the_check(self):
+        got = self.get({"transfer-encoding": "chunked", "content-length": "10"})
+        self.assertEqual(got.body, b"hello")
+
+    def test_not_exactly_chunked_is_checked(self):
+        self.assertIsInstance(self.get({"transfer-encoding": "gzip, chunked", "content-length": "10"}), TransportError)
+
+    def test_a_short_body_is_cut_off(self):
+        self.assertIsInstance(self.get({"content-length": "6"}), TransportError)
+
+    def test_digit_string_comparison_at_literal_boundaries(self):
+        self.assertEqual(self.get({"content-length": "4"}).body, b"hello")  # longer than declared: not short
+        self.assertEqual(self.get({"content-length": "5"}).body, b"hello")  # exact
+        self.assertIsInstance(self.get({"content-length": "6"}), TransportError)  # one over
+        self.assertIsInstance(self.get({"content-length": "10"}), TransportError)  # more digits
+
+    def test_no_content_length_is_not_checked(self):
+        self.assertEqual(self.get({"content-type": "text/plain"}).body, b"hello")

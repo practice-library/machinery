@@ -219,7 +219,7 @@ def outside_code(body):
     return "".join(p for i, p in enumerate(body.split("`")) if i % 2 == 0)
 
 
-class Rework(unittest.TestCase):
+class Hardening(unittest.TestCase):
     def test_a_fact_whose_source_differs_from_the_report_is_not_bumped(self):
         rep = golden()
         for r in rep["results"]:
