@@ -141,6 +141,43 @@ jobs:
           buf build --exclude-imports -o "$RUNNER_TEMP/image.json"
       - name: Every call takes caps first and replies with exactly the envelope fields
         run: jq -r -f proto/check.jq "$RUNNER_TEMP/image.json"
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: gen/go/go.mod
+          cache: false
+      - name: Build the Go generators from gen/go's go.sum, install the Python generators by hash
+        run: |
+          set -euo pipefail
+          (cd gen/go && GOFLAGS=-mod=readonly go build -o "$RUNNER_TEMP/bin/" \
+            google.golang.org/protobuf/cmd/protoc-gen-go connectrpc.com/connect/v2/cmd/protoc-gen-connect-go)
+          python3 -m venv "$RUNNER_TEMP/gen"
+          "$RUNNER_TEMP/gen/bin/python" -m pip install --require-hashes --only-binary :all: -r gen/requirements.txt
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+          echo "$RUNNER_TEMP/gen/bin" >> "$GITHUB_PATH"
+      - name: The generated code is exactly what buf generate writes
+        run: |
+          set -euo pipefail
+          find gen/go -name '*.go' -delete
+          rm -rf -- gen/python/src
+          buf generate
+          git add -N gen
+          # against HEAD, not the index: add -N also stages the deletion of a file no longer generated
+          git diff --exit-code --stat HEAD -- gen || { echo "::error::gen/ is not what buf generate writes; run it and commit"; exit 1; }
+      - name: The Go module vets and builds
+        working-directory: gen/go
+        run: GOFLAGS=-mod=readonly go vet ./... && GOFLAGS=-mod=readonly go build ./...
+      - name: The wheel builds the same twice, installs and imports
+        run: |
+          set -euo pipefail
+          python3 gen/python/build_wheel.py --out "$RUNNER_TEMP/w1" | tee "$RUNNER_TEMP/w1.sha256"
+          python3 gen/python/build_wheel.py --out "$RUNNER_TEMP/w2"
+          cmp "$RUNNER_TEMP"/w1/*.whl "$RUNNER_TEMP"/w2/*.whl
+          "$RUNNER_TEMP/gen/bin/python" -m pip install --no-deps "$RUNNER_TEMP"/w1/*.whl
+          cd "$RUNNER_TEMP"
+          "$RUNNER_TEMP/gen/bin/python" -I -c 'from machinery.plugin.v1alpha1 import plugin_pb; plugin_pb.RunUnitRequest.from_json("{\"caps\": {\"timeSeconds\": 60, \"outputBytes\": 1}}")'
+          # the service stubs import the Connect runtime, which the runtime PR pins; here they must only compile
+          "$RUNNER_TEMP/gen/bin/python" -I -c 'import sys; compile(open(sys.argv[1], encoding="utf-8").read(), sys.argv[1], "exec")' \
+            "$GITHUB_WORKSPACE/gen/python/src/machinery/plugin/v1alpha1/plugin_connect.py"
 
   leak-scan:
     uses: practice-library/.github/.github/workflows/leak-scan.yml@75a03317883e16f7ad93f1239dc53c9d0e1c4cc1 # v2.4.0
