@@ -106,10 +106,16 @@ class Success(unittest.TestCase):
             with self.subTest(body=body):
                 self.assertIsNotNone(answer(DESCRIBE, 200, body))
 
-    def test_a_success_fixture_given_as_a_raw_body_is_checked_without_a_crash(self):
+    def test_a_success_fixture_given_as_a_raw_body_is_checked_as_its_request(self):
         case = dict(DESCRIBE, rawBody='{"caps": {"timeSeconds": 1, "outputBytes": 4096}}')
         self.assertIsNone(answer(case, 200, GOOD))
         self.assertIn("ok true", answer(case, 200, dict(GOOD, ok=False)))
+        # Plan's invariants read the request's input: the raw body is that request
+        raw = json.dumps({"caps": {"timeSeconds": 1, "outputBytes": 4096}, "input": {"policy": {"maxRequestsPerRun": 1}}})
+        plan = {"name": "plan", "procedure": f"{SERVICE}/Plan", "rawBody": raw, "expect": {"code": "ok"}}
+        data = {"maxParallel": 1, "units": [{"budget": {"requests": 2}}]}
+        self.assertIn("budgets add up", answer(plan, 200, dict(GOOD, data=data)))
+        self.assertEqual(answer(dict(plan, rawBody="[1]"), 200, GOOD), "a success fixture's body must be a JSON object")
 
     def test_the_fixtures_own_input_is_checked_unless_it_expects_a_refused_request(self):
         why = answer(refused(), 400, error_body("failed_precondition"), validator=Picky("mergeInput"))
@@ -271,26 +277,34 @@ class Carry(unittest.TestCase):
     def test_each_case_outside_changed_is_carried_as_it_is(self):
         # derived here, not through carry.expect_of: the request less contract and verb, the exit code as its
         # Connect code, ok, data and notRead as the expected envelope, and about and why, all with v0 paths
-        carried = {}
+        def v1(value):  # the path rewrite, done here on the JSON text rather than by carry.v1
+            return json.loads(json.dumps(value).replace("/contract/v0/", "/contract/v1alpha1/"))
+
+        carried, group_procedure = {}, {}
         for text in carry.render().values():
-            carried.update({c["carries"]: c for c in json.loads(text)["cases"] if "carries" in c})
+            group = json.loads(text)
+            carried.update({c["carries"]: c for c in group["cases"] if "carries" in c})
+            group_procedure.update({c["name"]: group["procedure"] for c in group["cases"]})
         checked = 0
         for name in sorted(os.listdir(carry.V0)):
             with open(os.path.join(carry.V0, name), encoding="utf-8") as f:
-                cases = json.load(f)["cases"]
+                v0_group = json.load(f)
+            cases, verb = v0_group["cases"], v0_group["verb"]
             for v0 in cases:
                 if v0["name"] in carry.CHANGED:
                     continue
                 c, want = carried[v0["name"]], v0.get("expect", {})
                 with self.subTest(case=v0["name"]):
                     request = {k: v for k, v in v0.get("request", {}).items() if k not in ("contract", "verb")}
-                    self.assertEqual(c["request"], carry.v1(request))
+                    self.assertEqual(c["request"], v1(request))
+                    self.assertEqual(c.get("procedure", group_procedure[c["name"]]),
+                                     f"{carry.SERVICE}/{carry.CALL[v0.get('verb', verb)]}")
                     code = {0: "ok", 1: "failed_precondition", 2: "invalid_argument", 3: "unimplemented", 75: "unavailable"}
                     self.assertEqual(c["expect"]["code"], code[want.get("exit", 0)])
                     env = c["expect"]["envelope"]
                     self.assertEqual(env["ok"], want.get("ok", want.get("exit", 0) == 0))
                     for key in ("data", "notRead"):
-                        self.assertEqual(env.get(key), carry.v1(want[key]) if key in want else None, key)
+                        self.assertEqual(env.get(key), v1(want[key]) if key in want else None, key)
                     for key in ("about", "why"):
                         self.assertEqual(c.get(key), v0.get(key), key)
                 checked += 1
@@ -315,7 +329,7 @@ class Bridge(unittest.TestCase):
         served.start()
         headers = dict({"Content-Length": str(len(body))}, **headers)
         head = "".join(f"{k}: {v}\r\n" for k, v in headers.items())
-        ours.sendall(f"POST /{SERVICE}/Describe HTTP/1.0\r\n{head}\r\n".encode("utf-8") + body)
+        ours.sendall(f"POST /{SERVICE}/Describe HTTP/1.0\r\n{head}\r\n".encode("latin-1") + body)  # as servers read headers
         resp = http.client.HTTPResponse(ours)
         resp.begin()
         out = resp.status, resp.read()
@@ -328,7 +342,7 @@ class Bridge(unittest.TestCase):
         self.assertEqual(self.send({"Content-Type": "text/plain"})[0], 415)
 
     def test_a_content_length_that_is_not_a_number_is_invalid_argument(self):
-        for value in ("abc", "-1", "1e3", "\u0665", "12345678901"):
+        for value in ("abc", "-1", "1e3", "\u00b2", "1\u00b9", "12345678901"):  # ² and ¹ are digits to isdigit
             with self.subTest(value=value):
                 status, body = self.send({"Content-Type": "application/json", "Content-Length": value}, b"")
                 self.assertEqual((status, json.loads(body)["code"]), (400, "invalid_argument"))
