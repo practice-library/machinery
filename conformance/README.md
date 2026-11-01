@@ -82,3 +82,27 @@ Of the 12 quotes the first extractor misses:
 Each case is the smallest `<p>`, `<li>` or `<tr>` around one of these quotes, with its stored quote; a conforming plugin must report `unchanged`. The table quotes are stored as cell sequences. The generator checked each snippet. For the 10 text quotes, the careful extractor finds the quote in it and the first one does not. For the 2 table rows, neither finds the stored row in the text; the cells are found in one row of the snippet's table.
 
 The page snippets are from GitHub Docs (https://docs.github.com) by GitHub, licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/); the source repository is github/docs. Markup is trimmed to the element around the quote and attributes are removed; the text is unchanged.
+
+## Contract v1alpha1: Connect JSON fixtures
+
+`connect/` holds the same cases for contract v1alpha1 (plan #17), as Connect unary JSON calls. `carry.py` writes them from `cases/`: each fixture names the v0 case it `carries`, and a v0 case that no longer applies is listed in `notCarried` with the reason. CI runs `carry.py --check`, so the two never drift apart. Every case is carried as it is except the ones in `carry.py`'s `CHANGED`:
+- a package the plugin does not serve, and an unknown call, are `unimplemented` (v0: exit 3 and exit 2);
+- an answer larger than `outputBytes` is `resource_exhausted`;
+- raw bodies that are not strict JSON (not JSON, a key given twice, NaN, a lone surrogate) are `invalid_argument`;
+- "a contract that is not digits" is not carried: the request names no contract.
+
+`carry.py`'s `ADDED` holds the cases v1alpha1 adds, marked `added`: a recorded status that is not an integer, since a `ListValue` item is a double; and the forms that proto cannot tell from their full ones, which must work as those do: `network: {}`, `replay` with an empty `hosts`, and `replay` without `exchanges`.
+
+```sh
+python3 conformance/connect_run.py --url http://127.0.0.1:8080 \
+    --report-schema <spec/refresh-report/schema.json at the pin> --validator jsonschema
+```
+
+`connect_run.py` POSTs each fixture and checks, besides what `run.py` checks of the data:
+- **time and size:** the answer comes within `caps.timeSeconds` (plus 2 seconds), and its body, success or error, is at most `caps.outputBytes`;
+- **code:** the Connect code is the expected one, from the error body or, without one, inferred from the HTTP status as Connect clients do (404 is `unimplemented`); a Connect error's HTTP status is its code's;
+- **numbers:** a number with an integral value is written as an integer (`3`, never `3.0`), since `Struct` and `Value` hold doubles and every runtime must write them alike;
+- **success:** HTTP 200 with a JSON envelope that validates, `ok` true;
+- **failure:** `failed_precondition`, `resource_exhausted` and `unavailable` carry a `machinery.plugin.v1alpha1.Failure` detail. A detail is base64 of the binary message; `failure.py` decodes it without a protobuf library. It must validate as an envelope with `ok` false, `data` null and a warning, and the message must be its warnings joined by `; `.
+
+Until the plugin runs on a generated runtime (plan #17, PR 5), CI serves it through `v0_bridge.py`, which does what a runtime's transport does: routing, strict JSON, unknown fields, the deadline, integers written as integers, codes, the Failure detail, and an error body that fits `outputBytes`. The runner's own checks are tested in `tests/test_connect_runner.py` and mutated in `tests/guards.py`.
