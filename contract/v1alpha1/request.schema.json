@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/practice-library/machinery/contract/v1alpha1/request.schema.json",
   "title": "Call requests, contract v1alpha1",
-  "description": "The JSON form of each request message of machinery.plugin.v1alpha1.PluginService, one $defs entry per call, with the rules proto cannot state: the runtime checks them and answers INVALID_ARGUMENT. The call's path names the contract and the call, so the request names neither. Field names are proto's JSON names; a runtime's decoder also accepts the proto names (time_seconds) and integers written as strings, as proto's JSON mapping requires, and refuses unknown fields. The plugin reads nothing else: no files, no environment, no secrets. It opens a connection only to a host listed in network.hosts, and to none at all when network.replay is given.",
+  "description": "The JSON form of each request message of machinery.plugin.v1alpha1.PluginService, one $defs entry per call, with the rules proto cannot state: the runtime checks them and answers INVALID_ARGUMENT. The call's path names the contract and the call, so the request names neither. Field names are proto's JSON names; a runtime's decoder also accepts the proto names (time_seconds), integers written as strings, and null for a message or list field (read as left out), as proto's JSON mapping requires, and refuses unknown fields. This schema states the canonical form, without those. The plugin reads nothing else: no files, no environment, no secrets. It opens a connection only to a host listed in network.hosts, and to none at all when network.replay is given.",
   "$defs": {
     "describeRequest": {"type": "object", "required": ["caps"], "additionalProperties": false, "properties": {"caps": {"$ref": "#/$defs/caps"}}},
     "planRequest": {"type": "object", "required": ["caps", "input"], "additionalProperties": false, "properties": {"caps": {"$ref": "#/$defs/caps"}, "input": {"$ref": "#/$defs/input"}}},
@@ -20,35 +20,26 @@
       }
     },
     "network": {
-      "description": "Required on RunUnit and Run, absent on every other call. hosts: the only hosts the plugin may connect to. replay: recorded responses that stand in for the network, with a virtual clock, for conformance runs; the plugin then opens no connection and does not really wait.",
-      "oneOf": [
-        {
+      "description": "Required on RunUnit and Run, absent on every other call. hosts: the only hosts the plugin may connect to; none, when it is empty or left out. replay: recorded responses that stand in for the network, with a virtual clock, for conformance runs; the plugin then opens no connection and does not really wait. Proto's JSON mapping cannot tell an empty list or map from a missing one, so the rules are stated in those terms: {} and {\"hosts\": []} both mean no connection, replay goes with an empty or absent hosts, and exchanges may be left out when there are none.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "hosts": {"type": "array", "items": {"$ref": "#/$defs/host"}},
+        "replay": {
           "type": "object",
-          "required": ["hosts"],
-          "additionalProperties": false,
-          "properties": {"hosts": {"type": "array", "items": {"$ref": "#/$defs/host"}}}
-        },
-        {
-          "type": "object",
-          "required": ["replay"],
+          "required": ["start"],
           "additionalProperties": false,
           "properties": {
-            "replay": {
+            "start": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$", "description": "The virtual clock's start; waits advance it instead of passing"},
+            "exchanges": {
               "type": "object",
-              "required": ["start", "exchanges"],
-              "additionalProperties": false,
-              "properties": {
-                "start": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$", "description": "The virtual clock's start; waits advance it instead of passing"},
-                "exchanges": {
-                  "type": "object",
-                  "description": "url to its responses, answered in order; a request for a URL with no response left gets a network error",
-                  "additionalProperties": {"type": "array", "items": {"$ref": "#/$defs/recorded"}}
-                }
-              }
+              "description": "url to its responses, answered in order; a request for a URL with no response left gets a network error",
+              "additionalProperties": {"type": "array", "items": {"$ref": "#/$defs/recorded"}}
             }
           }
         }
-      ]
+      },
+      "not": {"required": ["hosts", "replay"], "properties": {"hosts": {"minItems": 1}}}
     },
     "input": {"type": "object", "description": "The call's input, a google.protobuf.Struct; its schema depends on the job named by Describe (fact-refresh.schema.json for the fact-refresh job)."},
     "host": {"type": "string", "pattern": "^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$"},
@@ -61,7 +52,7 @@
         "body": {"type": "string", "description": "The body as UTF-8 text."},
         "error": {"type": "string", "minLength": 1, "description": "Instead of a response: the request fails with this network error."}
       },
-      "oneOf": [{"required": ["status"]}, {"required": ["error"]}]
+      "oneOf": [{"required": ["status"], "not": {"required": ["error"]}}, {"required": ["error"], "maxProperties": 1}]
     }
   }
 }

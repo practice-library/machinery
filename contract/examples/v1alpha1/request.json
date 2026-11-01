@@ -141,21 +141,9 @@
             },
             "input": {}
           }
-        }
-      ],
-      "invalid": [
-        {
-          "name": "no network on RunUnit",
-          "instance": {
-            "caps": {
-              "timeSeconds": 60,
-              "outputBytes": 1048576
-            },
-            "input": {}
-          }
         },
         {
-          "name": "network with neither hosts nor replay",
+          "name": "network {}: no connection, as a default encoder writes an empty hosts",
           "instance": {
             "caps": {
               "timeSeconds": 60,
@@ -166,7 +154,7 @@
           }
         },
         {
-          "name": "network with both hosts and replay",
+          "name": "replay with an empty hosts, as an encoder that writes every field does",
           "instance": {
             "caps": {
               "timeSeconds": 60,
@@ -178,6 +166,46 @@
                 "start": "2026-10-31T12:00:00Z",
                 "exchanges": {}
               }
+            },
+            "input": {}
+          }
+        },
+        {
+          "name": "replay with no exchanges left out, as a default encoder writes an empty map",
+          "instance": {
+            "caps": {
+              "timeSeconds": 60,
+              "outputBytes": 1048576
+            },
+            "network": {
+              "replay": {
+                "start": "2026-10-31T12:00:00Z"
+              }
+            },
+            "input": {}
+          }
+        },
+        {
+          "name": "the largest caps",
+          "instance": {
+            "caps": {
+              "timeSeconds": 3600,
+              "outputBytes": 16777216
+            },
+            "network": {
+              "hosts": []
+            },
+            "input": {}
+          }
+        }
+      ],
+      "invalid": [
+        {
+          "name": "no network on RunUnit",
+          "instance": {
+            "caps": {
+              "timeSeconds": 60,
+              "outputBytes": 1048576
             },
             "input": {}
           }
@@ -296,6 +324,62 @@
               "hosts": [
                 "Docs.example.com"
               ]
+            },
+            "input": {}
+          }
+        },
+        {
+          "name": "replay with a listed host",
+          "instance": {
+            "caps": {
+              "timeSeconds": 60,
+              "outputBytes": 1048576
+            },
+            "network": {
+              "hosts": [
+                "docs.example.com"
+              ],
+              "replay": {
+                "start": "2026-10-31T12:00:00Z"
+              }
+            },
+            "input": {}
+          }
+        },
+        {
+          "name": "replay without its start",
+          "instance": {
+            "caps": {
+              "timeSeconds": 60,
+              "outputBytes": 1048576
+            },
+            "network": {
+              "replay": {
+                "exchanges": {}
+              }
+            },
+            "input": {}
+          }
+        },
+        {
+          "name": "a recorded error that also has a body",
+          "instance": {
+            "caps": {
+              "timeSeconds": 60,
+              "outputBytes": 1048576
+            },
+            "network": {
+              "replay": {
+                "start": "2026-10-31T12:00:00Z",
+                "exchanges": {
+                  "https://docs.example.com/a": [
+                    {
+                      "error": "connection reset",
+                      "body": "x"
+                    }
+                  ]
+                }
+              }
             },
             "input": {}
           }

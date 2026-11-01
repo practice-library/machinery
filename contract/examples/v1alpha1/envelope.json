@@ -64,6 +64,60 @@
           }
         }
       ]
+    },
+    {
+      "schema": "https://github.com/practice-library/machinery/contract/v1alpha1/envelope.schema.json#/$defs/response",
+      "valid": [
+        {
+          "name": "ok true",
+          "instance": {
+            "ok": true,
+            "data": {},
+            "notRead": [],
+            "warnings": []
+          }
+        }
+      ],
+      "invalid": [
+        {
+          "name": "a success that says ok false",
+          "instance": {
+            "ok": false,
+            "data": null,
+            "notRead": [],
+            "warnings": [
+              "x"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "schema": "https://github.com/practice-library/machinery/contract/v1alpha1/envelope.schema.json#/$defs/failure",
+      "valid": [
+        {
+          "name": "ok false, data null, a warning",
+          "instance": {
+            "ok": false,
+            "data": null,
+            "notRead": [],
+            "warnings": [
+              "x"
+            ]
+          }
+        }
+      ],
+      "invalid": [
+        {
+          "name": "a Failure that says ok true",
+          "instance": {
+            "ok": true,
+            "data": {},
+            "notRead": [],
+            "warnings": []
+          }
+        }
+      ]
     }
   ]
 }

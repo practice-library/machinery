@@ -110,7 +110,8 @@
             "run-unit",
             "merge",
             "run"
-          ]
+          ],
+          "description": "The verb's name, as in contract v0; the call that serves it is Plan, RunUnit, Merge or Run of machinery.plugin.v1alpha1.PluginService."
         },
         "shardable": {
           "type": "boolean",
