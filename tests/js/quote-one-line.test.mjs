@@ -18,6 +18,8 @@ test("every case of the requirement table", () => {
   }
 });
 
+// The sweep takes category membership from the runtime with the same category set as the module, so it checks the
+// escaping, not the choice of categories. The table and the list below, written out by hand, check the choice.
 const CATEGORY = /^[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]$/u;
 const UNSAFE = /[\p{Cc}\p{Cf}\p{Zl}\p{Zp}\p{Cs}]/u;  // what must never be in the output raw
 
@@ -38,6 +40,15 @@ test("every code point: escaped exactly when its category says so, and never lef
   }
   // DEL and the 32 C1 controls, about 170 format characters, and the 2 separators: 205 in Unicode 15/16
   assert.ok(escaped >= 200, `only ${escaped} code points escaped beyond JSON.stringify`);
+});
+
+test("characters that must be escaped, listed by hand and not from a category", () => {
+  const must = [0x7f, 0x80, 0x85, 0x9b, 0x9f, 0xad, 0x061c, 0x180e, 0x200b, 0x200c, 0x200d, 0x200e, 0x200f, 0x2028, 0x2029,
+    0x202a, 0x202b, 0x202c, 0x202d, 0x202e, 0x2060, 0x2066, 0x2067, 0x2068, 0x2069, 0xfeff, 0xe0001, 0xe0041, 0xe007f];
+  for (const cp of must) {
+    const want = cp > 0xffff ? `"\\u{${cp.toString(16)}}"` : `"\\u${cp.toString(16).padStart(4, "0")}"`;
+    assert.equal(quoteOneLine(String.fromCodePoint(cp)), want, `U+${cp.toString(16)}`);
+  }
 });
 
 test("the output is one line", () => {

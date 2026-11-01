@@ -1,5 +1,5 @@
 {
-  "about": "The requirement of quoteOneLine (machinery#32): quote an untrusted string for one-line terminal output. Each case's input is a list of code points (a value in U+D800..U+DFFF is a lone surrogate); output is the exact result.",
+  "about": "The requirement of quoteOneLine (machinery#32): quote an untrusted string for one-line terminal output. It guarantees one line with no raw control (Cc), format (Cf), line separator (Zl), paragraph separator (Zp) or lone surrogate. It is not ASCII-only: every other code point, such as e acute, an emoji or U+00A0, is left as it is. The cases hold from Unicode 15 on; an implementation follows its own Unicode version, which may escape later format characters. Each case's input is a list of code points (a value in U+D800..U+DFFF is a lone surrogate); output is the exact result.",
   "rule": [
     "Keep the first max code points of the value (default 40); a surrogate pair is one code point and is never split, a lone surrogate is one.",
     "Apply JSON.stringify: quotes, backslash, C0 controls and lone surrogates are escaped as JSON does (\\b \\t \\n \\f \\r, or lower-case \\u00xx and \\udxxx).",
@@ -268,7 +268,7 @@
       "output": "\"‧\""
     },
     {
-      "name": "unchanged: U+2030 per mille, above the isolates",
+      "name": "unchanged: U+2030 per mille, above U+202E and the narrow no-break space",
       "input": [
         8240
       ],
@@ -405,13 +405,23 @@
       "output": "\"ab😀\""
     },
     {
-      "name": "max never splits a pair",
+      "name": "max cuts before a pair it cannot keep",
       "input": [
         97,
         128512
       ],
       "max": 1,
       "output": "\"a\""
+    },
+    {
+      "name": "max never splits a pair: a cut at two UTF-16 units keeps the whole pair",
+      "input": [
+        97,
+        128512,
+        98
+      ],
+      "max": 2,
+      "output": "\"a😀\""
     },
     {
       "name": "max 0 gives an empty quote",

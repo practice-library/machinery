@@ -26,12 +26,30 @@ const GUARDS = [
   ["max is a whole number, 0 or more", "if (!Number.isSafeInteger(max) || max < 0) throw", "if (false) throw"],
 ];
 
+function copy() {
+  const tmp = mkdtempSync(join(tmpdir(), "quote-guard-"));
+  for (const d of ["lib/js", "tests/js"]) cpSync(join(ROOT, d), join(tmp, d), { recursive: true });
+  cpSync(join(ROOT, "conformance/quote-one-line.json"), join(tmp, "conformance/quote-one-line.json"));
+  return tmp;
+}
+const test = (cwd) => spawnSync(process.execPath, ["--test", "tests/js/quote-one-line.test.mjs"], { cwd, encoding: "utf8" });
+
+// The unmutated copy must pass first: a copy that cannot run would make every row below look tested.
+const base = copy();
+try {
+  const run = test(base);
+  if (run.status !== 0) {
+    console.log(`FAIL the unmutated copy does not pass its tests:\n${run.stdout}${run.stderr}`);
+    process.exit(1);
+  }
+} finally {
+  rmSync(base, { recursive: true, force: true });
+}
+
 let failed = 0;
 for (const [what, code, mutant] of GUARDS) {
-  const tmp = mkdtempSync(join(tmpdir(), "quote-guard-"));
+  const tmp = copy();
   try {
-    for (const d of ["lib/js", "tests/js"]) cpSync(join(ROOT, d), join(tmp, d), { recursive: true });
-    cpSync(join(ROOT, "conformance/quote-one-line.json"), join(tmp, "conformance/quote-one-line.json"));
     const target = join(tmp, MODULE);
     const text = readFileSync(target, "utf8");
     const count = text.split(code).length - 1;
@@ -41,7 +59,7 @@ for (const [what, code, mutant] of GUARDS) {
       continue;
     }
     writeFileSync(target, text.replace(code, mutant));
-    const run = spawnSync(process.execPath, ["--test", "tests/js/quote-one-line.test.mjs"], { cwd: tmp, encoding: "utf8" });
+    const run = test(tmp);
     if (run.status === 0) {
       console.log(`FAIL ${what}: the tests still pass without the guard`);
       failed += 1;
