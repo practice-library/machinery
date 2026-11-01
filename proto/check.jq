@@ -4,7 +4,9 @@
 # - every response, and the Failure detail, is exactly the shared reply format (envelope.schema.json): the
 #   same numbers, names, labels, types and presence;
 # - every request is exactly its fields: caps = 1, then network (RunUnit and Run only) and input (all but
-#   Describe), each singular, of their types.
+#   Describe), each singular, of their types;
+# - Caps, Network, Replay (with exchanges a map of string to ListValue, so its JSON is v0's URL to an array)
+#   and NotRead are exactly their fields, and the package has no other message.
 # Prints each finding and exits 1 when there is one, or when the package or its calls are not found at all.
 def sig: [.field[] | "\(.number) \(.name) \(.label) \(.type) \(.typeName // "") \(.proto3Optional // false)"];
 "machinery.plugin.v1alpha1" as $pkg
@@ -23,12 +25,25 @@ def sig: [.field[] | "\(.number) \(.name) \(.label) \(.type) \(.typeName // "") 
     Merge: [$caps, "2 input LABEL_OPTIONAL TYPE_MESSAGE .google.protobuf.Struct false"],
     Run: [$caps, "2 network LABEL_OPTIONAL TYPE_MESSAGE .\($pkg).Network false", "3 input LABEL_OPTIONAL TYPE_MESSAGE .google.protobuf.Struct false"]
   } as $requests
-| ([$files[].messageType[] | {key: ".\($pkg).\(.name)", value: .}] | from_entries) as $m
+| {
+    Caps: ["1 time_seconds LABEL_OPTIONAL TYPE_UINT32  false", "2 output_bytes LABEL_OPTIONAL TYPE_UINT32  false"],
+    Network: ["1 hosts LABEL_REPEATED TYPE_STRING  false", "2 replay LABEL_OPTIONAL TYPE_MESSAGE .\($pkg).Replay false"],
+    Replay: ["1 start LABEL_OPTIONAL TYPE_STRING  false", "2 exchanges LABEL_REPEATED TYPE_MESSAGE .\($pkg).Replay.ExchangesEntry false"],
+    "Replay.ExchangesEntry": ["1 key LABEL_OPTIONAL TYPE_STRING  false", "2 value LABEL_OPTIONAL TYPE_MESSAGE .google.protobuf.ListValue false"],
+    NotRead: ["1 what LABEL_OPTIONAL TYPE_STRING  false", "2 why LABEL_OPTIONAL TYPE_STRING  false"]
+  } as $frames
+| ([$files[].messageType[] | {key: ".\($pkg).\(.name)", value: .}, (.name as $o | .nestedType[]? | {key: ".\($pkg).\($o).\(.name)", value: .})]
+   | from_entries) as $m
 | [$files[].service[]?.method[]?] as $calls
 | [
     (if ($files | length) == 0 then "no file of package \($pkg)" else empty end),
     (if ([$calls[].name] | sort) != ($requests | keys | sort)
      then "the calls are \([$calls[].name] | sort), not \($requests | keys | sort)" else empty end),
+    (if ([$files[].messageType[].name] | sort) != (([$requests | keys[] | (. + "Request", . + "Response")] + ($frames | keys | map(select(contains(".") | not))) + ["Failure"]) | sort)
+     then "the messages are \([$files[].messageType[].name] | sort)" else empty end),
+    ($frames | to_entries[] | .key as $k | .value as $want
+     | if $m[".\($pkg).\($k)"] == null or ($m[".\($pkg).\($k)"] | sig) != $want
+       then "\($k) is not exactly its fields \($want | map(split(" ")[1]))" else empty end),
     (if $m[".\($pkg).Failure"] == null then "no Failure message"
      elif ($m[".\($pkg).Failure"] | sig) != $envelope then "Failure is not exactly the envelope fields" else empty end),
     ($calls[]
@@ -42,5 +57,5 @@ def sig: [.field[] | "\(.number) \(.name) \(.label) \(.type) \(.typeName // "") 
   ] as $findings
 | if ($findings | length) > 0
   then ($findings | map("::error file=proto/machinery/plugin/v1alpha1/plugin.proto::\(.)") | join("\n")) + "\n" | halt_error(1)
-  else "the five calls; each request exactly its fields; every reply and Failure exactly the envelope"
+  else "the five calls; each request, Caps, Network, Replay and NotRead exactly their fields; every reply and Failure exactly the envelope"
   end

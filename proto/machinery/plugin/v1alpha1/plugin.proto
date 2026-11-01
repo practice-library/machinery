@@ -21,9 +21,10 @@
 //
 // Every error the plugin itself returns has a message, which is its warnings joined with "; ", and carries
 // one Failure detail. On the Connect JSON wire a detail is {"type": "machinery.plugin.v1alpha1.Failure",
-// "value": <base64 of the binary message>}: typed clients decode it, and a plain-JSON caller reads code and
-// message. An error without a Failure detail came from the transport or a proxy, not the plugin. A caller
-// retries only UNAVAILABLE with a Failure detail; that is the plugin's "try again later".
+// "value": <base64 of the binary message>}: typed clients decode it, and a plain-JSON caller reads code,
+// message and each detail's type, which is plain JSON. An error without a Failure detail came from the
+// transport or a proxy, not the plugin. A caller retries only UNAVAILABLE with a Failure detail; that is the
+// plugin's "try again later" (exit 75 of contract v0).
 //
 // Unstable until v1, like contract v0: v1alpha1 may still change. From v1 on, buf breaking enforces
 // additive-only change.
