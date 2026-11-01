@@ -25,6 +25,7 @@ Exit 0 when every fixture passes, 1 otherwise.
 from __future__ import annotations
 
 import argparse
+import http.client
 import json
 import os
 import sys
@@ -76,8 +77,8 @@ def post(url, body: bytes, time_cap: int, out_cap: int):
             status, ctype, data = resp.status, resp.headers.get("Content-Type", ""), resp.read(out_cap + 1)
     except urllib.error.HTTPError as err:
         status, ctype, data = err.code, err.headers.get("Content-Type", ""), err.read(out_cap + 1)
-    except (urllib.error.URLError, OSError) as err:
-        return None, "", b"", f"no answer within timeSeconds ({time_cap}): {err}"
+    except (urllib.error.URLError, OSError, http.client.HTTPException) as err:
+        return None, "", b"", f"no complete answer within timeSeconds ({time_cap}): {str(err)[:200]}"
     if time.monotonic() - started > time_cap + GRACE_SECONDS:
         return None, "", b"", f"the answer came after timeSeconds ({time_cap})"
     if len(data) > out_cap:
@@ -96,11 +97,16 @@ def _number(text: str):
     return value
 
 
+def _constant(name):
+    raise ValueError(f"{name} is not JSON")
+
+
 def strict_json(data: bytes):
     """The body's JSON value, or why not. A number with an integral value must be written as an integer
-    (3, never 3.0): proto's Struct and Value hold doubles, and every runtime must write them alike."""
+    (3, never 3.0): proto's Struct and Value hold doubles, and every runtime must write them alike. NaN and
+    Infinity are not JSON."""
     try:
-        return json.loads(data.decode("utf-8"), parse_float=_number), None
+        return json.loads(data.decode("utf-8"), parse_float=_number, parse_constant=_constant), None
     except Integral as err:
         return None, f"the body writes the integral number {err} with a fraction or exponent: write it as an integer"
     except (UnicodeDecodeError, ValueError) as err:
@@ -115,7 +121,9 @@ def check_success(validator, call, request, status, ctype, data, expect):
     envelope, why = strict_json(data)
     if why:
         return why
-    why = validator.check(BASE + "envelope.schema.json", envelope)
+    if not isinstance(envelope, dict) or "data" not in envelope:
+        return "a success answers an envelope object with data"
+    why = validator.check(BASE + "envelope.schema.json#/$defs/response", envelope)
     if why:
         return f"response: {why}"
     if envelope.get("ok") is not True:
@@ -138,13 +146,19 @@ def check_success(validator, call, request, status, ctype, data, expect):
 
 def check_error(validator, status, ctype, data, expect):
     body, why = (strict_json(data) if ctype == "application/json" else (None, "not JSON"))
+    if why and why.startswith("the body writes the integral number"):
+        return why
     connect = isinstance(body, dict) and isinstance(body.get("code"), str)
     code = body["code"] if connect else INFERRED.get(status, "unknown")
-    if connect and HTTP_STATUS.get(code) != status:
-        return f"code {code} with HTTP {status}, expected HTTP {HTTP_STATUS.get(code)}"
+    if connect and code not in HTTP_STATUS:
+        return f"the code {code[:40]!r} is not a Connect code"
+    if connect and HTTP_STATUS[code] != status:
+        return f"code {code} with HTTP {status}, expected HTTP {HTTP_STATUS[code]}"
     if code != expect["code"]:
         return f"code {code} (HTTP {status}), expected {expect['code']}"
-    details = [d for d in (body.get("details") or []) if isinstance(d, dict) and d.get("type") == failure.TYPE] if connect else []
+    if connect and not isinstance(body.get("details", []), list):
+        return "the error's details is not a list"
+    details = [d for d in body.get("details", []) if isinstance(d, dict) and d.get("type") == failure.TYPE] if connect else []
     if len(details) > 1:
         return "more than one Failure detail"
     if not details:
@@ -157,7 +171,7 @@ def check_error(validator, status, ctype, data, expect):
         envelope = failure.decode(details[0].get("value"))
     except failure.Malformed as err:
         return f"the Failure detail does not decode: {err}"
-    why = validator.check(BASE + "envelope.schema.json", envelope)
+    why = validator.check(BASE + "envelope.schema.json#/$defs/failure", envelope)
     if why:
         return f"Failure: {why}"
     if envelope["ok"] is not False or envelope["data"] is not None or not envelope["warnings"]:

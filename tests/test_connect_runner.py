@@ -33,11 +33,25 @@ def error_body(code, envelope=REFUSED, message=None, **extra):
     return json.dumps(body).encode("utf-8")
 
 
-def answer(case, status, body, ctype="application/json"):
+class Picky:
+    """A validator that rejects every instance checked against the one schema reference ending in `refuses`."""
+
+    def __init__(self, refuses=None):
+        self.refuses, self.seen = refuses, []
+
+    def check(self, ref, instance):
+        self.seen.append(ref)
+        return f"refused by {ref}" if self.refuses and ref.endswith(self.refuses) else None
+
+
+def answer(case, status, body, ctype="application/json", validator=None):
     """What the runner says of one fixture when the service answers this."""
     data = body if isinstance(body, bytes) else json.dumps(body).encode("utf-8")
     with mock.patch.object(connect_run, "post", return_value=(status, ctype, data, None)):
-        return connect_run.run_fixture("http://127.0.0.1:1", connect_run.Validator(None, os.devnull), GROUP, case)
+        return connect_run.run_fixture("http://127.0.0.1:1", validator or Picky(), GROUP, case)
+
+
+GOOD = {"ok": True, "data": DESCRIBED, "notRead": [], "warnings": []}
 
 
 def refused(code="failed_precondition", **envelope):
@@ -71,6 +85,21 @@ class Success(unittest.TestCase):
         body = json.dumps({"ok": True, "data": dict(DESCRIBED, pacing=2.5), "notRead": [], "warnings": []}).encode()
         self.assertIsNone(answer(DESCRIBE, 200, body))
 
+    def test_the_expected_envelope_is_matched_against_the_response(self):
+        case = dict(DESCRIBE, expect={"code": "ok", "envelope": {"ok": True, "data": {"name": "other"}}})
+        self.assertIn("response.data.name", answer(case, 200, GOOD))
+
+    def test_each_schema_of_a_success_is_checked(self):
+        for refuses, said in (("envelope.schema.json#/$defs/response", "response:"), ("describe.schema.json", "data:"),
+                              ("request.schema.json#/$defs/describeRequest", "the fixture's own request is not valid")):
+            with self.subTest(refuses=refuses):
+                self.assertIn(said, answer(DESCRIBE, 200, GOOD, validator=Picky(refuses)))
+
+    def test_a_body_that_is_not_an_envelope_object_fails_without_a_crash(self):
+        for body in (b"[1]", b'{"ok": true}', b'{"ok": true, "data": NaN, "notRead": [], "warnings": []}'):
+            with self.subTest(body=body):
+                self.assertIsNotNone(answer(DESCRIBE, 200, body))
+
     def test_an_error_when_a_success_is_expected_fails(self):
         self.assertIn("HTTP 400", answer(DESCRIBE, 400, error_body("invalid_argument")))
 
@@ -102,6 +131,23 @@ class Errors(unittest.TestCase):
     def test_invalid_argument_may_come_without_a_detail(self):
         case = {"name": "x", "rawBody": "not json", "expect": {"code": "invalid_argument"}}
         self.assertIsNone(answer(case, 400, error_body("invalid_argument", envelope=None, message="bad JSON")))
+
+    def test_a_fixture_that_expects_a_failure_detail_gets_one(self):
+        case = {"name": "x", "request": {}, "expect": {"code": "invalid_argument", "envelope": {"ok": False, "warnings": ["x"]}}}
+        why = answer(case, 400, error_body("invalid_argument", envelope=None, message="no detail"))
+        self.assertIn("expects a Failure detail", why)
+
+    def test_the_failure_is_checked_against_its_schema(self):
+        why = answer(refused(), 400, error_body("failed_precondition"), validator=Picky("envelope.schema.json#/$defs/failure"))
+        self.assertIn("Failure: refused", why)
+
+    def test_hostile_error_bodies_fail_without_a_crash(self):
+        cases = ((400, {"code": "failed_precondition", "details": 5}, "not a list"),
+                 (418, {"code": "teapot"}, "not a Connect code"),
+                 (400, b'{"code": "failed_precondition", "n": 1.0}', "write it as an integer"))
+        for status, body, said in cases:
+            with self.subTest(body=body):
+                self.assertIn(said, answer(refused(), status, body))
 
     def test_two_failure_details_fail(self):
         body = json.loads(error_body("failed_precondition"))
@@ -175,7 +221,9 @@ class Codec(unittest.TestCase):
         self.assertEqual(failure.decode(failure.encode(env)), env)
 
     def test_malformed_values_are_refused_never_read_as_empty(self):
-        for value in ("!!", "CP8", "IgI", "IAE", 7):  # not base64, a cut varint, a cut string, warnings as a varint
+        # not base64, a cut varint, a cut string, warnings as a varint, wire type 5, field number 0, a string
+        # that is not UTF-8, an unknown NotRead field, an unknown Struct entry field (inside data)
+        for value in ("!!", "CP8", "IgI", "IAE", "JQ", "AAA", "IgH/", "GgIYAQ", "EgYqBAoCGAE", 7):
             with self.subTest(value=value), self.assertRaises(failure.Malformed):
                 failure.decode(value)
 

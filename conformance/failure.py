@@ -3,7 +3,9 @@
 On the Connect JSON wire an error detail is {"type": "machinery.plugin.v1alpha1.Failure", "value": <unpadded
 base64 of the binary message>}. decode() turns that value into the envelope's JSON form
 ({ok, data, notRead, warnings}, every field present), so it can be checked against envelope.schema.json;
-encode() is its inverse, for the test bridge. Field numbers are those of plugin.proto:
+encode() is its inverse, for the test bridge. decode() refuses fields plugin.proto does not define, where a
+protobuf parser would skip them: v1alpha1 may still change, and a field this decoder does not know is one
+the runner cannot check. Field numbers are those of plugin.proto:
   Failure  1 ok bool, 2 data google.protobuf.Value, 3 not_read repeated NotRead, 4 warnings repeated string
   NotRead  1 what string, 2 why string
   Value    1 null_value, 2 number_value double, 3 string_value, 4 bool_value, 5 struct_value, 6 list_value
@@ -80,16 +82,23 @@ def _value(buf: bytes):
         elif number == 5 and wire == 2:
             out = {}
             for n, w, entry in _fields(v):
-                if n == 1 and w == 2:
-                    key, val = "", None
-                    for en, ew, ev in _fields(entry):
-                        if en == 1 and ew == 2:
-                            key = _text(ev)
-                        elif en == 2 and ew == 2:
-                            val = _value(ev)
-                    out[key] = val
+                if n != 1 or w != 2:
+                    raise Malformed(f"Struct field {n} with wire type {w}")
+                key, val = "", None
+                for en, ew, ev in _fields(entry):
+                    if en == 1 and ew == 2:
+                        key = _text(ev)
+                    elif en == 2 and ew == 2:
+                        val = _value(ev)
+                    else:
+                        raise Malformed(f"Struct entry field {en} with wire type {ew}")
+                out[key] = val
         elif number == 6 and wire == 2:
-            out = [_value(item) for n, w, item in _fields(v) if n == 1 and w == 2]
+            out = []
+            for n, w, item in _fields(v):
+                if n != 1 or w != 2:
+                    raise Malformed(f"ListValue field {n} with wire type {w}")
+                out.append(_value(item))
         else:
             raise Malformed(f"Value field {number} with wire type {wire}")
     return out
@@ -112,8 +121,9 @@ def decode(value_b64: str) -> dict:
         elif number == 3 and wire == 2:
             item = {"what": "", "why": ""}
             for n, w, x in _fields(v):
-                if n in (1, 2) and w == 2:
-                    item["what" if n == 1 else "why"] = _text(x)
+                if n not in (1, 2) or w != 2:
+                    raise Malformed(f"NotRead field {n} with wire type {w}")
+                item["what" if n == 1 else "why"] = _text(x)
             out["notRead"].append(item)
         elif number == 4 and wire == 2:
             out["warnings"].append(_text(v))
