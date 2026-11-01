@@ -103,6 +103,16 @@ jobs:
           jsonschema metaschema contract/v1alpha1/*.json
           python3 contract/check_examples.py --validator jsonschema --report-schema "$REPORT_SCHEMA" \
             --contract contract/v1alpha1 --examples contract/examples/v1alpha1
+      - name: The Connect fixtures are what conformance/carry.py writes
+        run: python3 conformance/carry.py --check
+      - name: The Python plugin, served through the v0 bridge, passes the Connect fixtures
+        run: |
+          set -euo pipefail
+          python3 conformance/v0_bridge.py --plugin "$PWD/bin/fact-refresh-plugin" > "$RUNNER_TEMP/bridge.url" &
+          for _ in $(seq 100); do [ -s "$RUNNER_TEMP/bridge.url" ] && break; sleep 0.1; done
+          python3 conformance/connect_run.py --url "$(head -1 "$RUNNER_TEMP/bridge.url")" \
+            --report-schema "$REPORT_SCHEMA" --validator jsonschema
+          kill %1
 
   proto:
     name: proto

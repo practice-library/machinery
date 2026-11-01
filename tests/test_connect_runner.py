@@ -14,6 +14,7 @@ from unittest import mock
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "conformance"))
 
+import carry  # noqa: E402
 import connect_run  # noqa: E402
 import failure  # noqa: E402
 
@@ -227,3 +228,21 @@ class Codec(unittest.TestCase):
             with self.subTest(value=value), self.assertRaises(failure.Malformed):
                 failure.decode(value)
 
+
+
+class Carry(unittest.TestCase):
+    def test_the_fixtures_are_what_carry_writes_and_account_for_every_v0_case(self):
+        files = carry.render()
+        v0 = set()
+        for name in os.listdir(carry.V0):
+            with open(os.path.join(carry.V0, name), encoding="utf-8") as f:
+                v0 |= {c["name"] for c in json.load(f)["cases"]}
+        accounted = set()
+        for name, text in files.items():
+            with open(os.path.join(carry.OUT, name), encoding="utf-8") as f:
+                self.assertEqual(f.read(), text, f"{name}: run conformance/carry.py")
+            group = json.loads(text)
+            accounted |= {c["carries"] for c in group["cases"] if "carries" in c}
+            accounted |= {c["name"] for c in group.get("notCarried", [])}
+            self.assertTrue(all("carries" in c or c.get("added") for c in group["cases"]), name)
+        self.assertEqual(accounted, v0)

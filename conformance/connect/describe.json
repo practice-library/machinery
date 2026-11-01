@@ -1,0 +1,539 @@
+{
+  "about": "What the plugin says it is, and how it answers requests it must refuse.",
+  "carriedFrom": "conformance/cases/describe.json",
+  "procedure": "machinery.plugin.v1alpha1.PluginService/Describe",
+  "defaults": {
+    "caps": {
+      "timeSeconds": 60,
+      "outputBytes": 1048576
+    }
+  },
+  "cases": [
+    {
+      "name": "describe names its package and the three shardable verbs, each with its schemas",
+      "carries": "describe names contract 0 and the three shardable verbs, each with its schemas",
+      "request": {},
+      "expect": {
+        "code": "ok",
+        "envelope": {
+          "ok": true,
+          "data": {
+            "contracts": [
+              "machinery.plugin.v1alpha1"
+            ],
+            "job": "fact-refresh",
+            "verbs": [
+              {
+                "name": "plan",
+                "shardable": false,
+                "input": "https://github.com/practice-library/machinery/contract/v1alpha1/fact-refresh.schema.json#/$defs/planInput",
+                "output": "https://github.com/practice-library/machinery/contract/v1alpha1/fact-refresh.schema.json#/$defs/plan"
+              },
+              {
+                "name": "run-unit",
+                "shardable": true,
+                "input": "https://github.com/practice-library/machinery/contract/v1alpha1/fact-refresh.schema.json#/$defs/unit",
+                "output": "https://github.com/practice-library/machinery/contract/v1alpha1/fact-refresh.schema.json#/$defs/partial"
+              },
+              {
+                "name": "merge",
+                "shardable": false,
+                "input": "https://github.com/practice-library/machinery/contract/v1alpha1/fact-refresh.schema.json#/$defs/mergeInput",
+                "output": "https://github.com/practice-library/.github/spec/refresh-report/schema.json"
+              }
+            ],
+            "protocol": "machinery.plugin.v1alpha1"
+          }
+        }
+      }
+    },
+    {
+      "name": "a package the plugin does not serve is unimplemented",
+      "carries": "a contract version the plugin does not speak is exit 3",
+      "procedure": "machinery.plugin.v1alpha99.PluginService/Describe",
+      "request": {},
+      "expect": {
+        "code": "unimplemented"
+      }
+    },
+    {
+      "name": "a body that is not JSON is invalid_argument",
+      "carries": "stdin that is not JSON is exit 2",
+      "rawBody": "not json",
+      "expect": {
+        "code": "invalid_argument"
+      }
+    },
+    {
+      "name": "an unknown call is unimplemented (v0: exit 2)",
+      "carries": "an unknown verb is exit 2",
+      "procedure": "machinery.plugin.v1alpha1.PluginService/FetchEverything",
+      "request": {},
+      "expect": {
+        "code": "unimplemented"
+      }
+    },
+    {
+      "name": "a request without caps is invalid_argument",
+      "carries": "a request without caps is exit 2",
+      "rawBody": "{}",
+      "expect": {
+        "code": "invalid_argument"
+      }
+    },
+    {
+      "name": "run-unit without network is invalid_argument",
+      "carries": "run-unit without network is exit 2",
+      "procedure": "machinery.plugin.v1alpha1.PluginService/RunUnit",
+      "request": {
+        "input": {
+          "id": "host:docs.example.com",
+          "shardKey": "docs.example.com",
+          "pacing": {
+            "minIntervalSeconds": 2.0
+          },
+          "budget": {
+            "requests": 10
+          },
+          "host": {
+            "host": "docs.example.com",
+            "format": "html",
+            "maxBytes": 2000000,
+            "timeoutSeconds": 30
+          },
+          "userAgent": "practice-library-graphs/1 (+https://github.com/practice-library/graphs)",
+          "retryAfterMaxSeconds": 60,
+          "facts": [
+            {
+              "node": "rule.example.a",
+              "source": "https://docs.example.com/a",
+              "measuredAt": "2026-09-01",
+              "quote": {
+                "text": "A."
+              }
+            }
+          ]
+        }
+      },
+      "expect": {
+        "code": "invalid_argument",
+        "envelope": {
+          "ok": false
+        }
+      }
+    },
+    {
+      "name": "an answer larger than outputBytes is resource_exhausted, not a cut answer",
+      "carries": "an answer larger than outputBytes is exit 1, not a cut answer",
+      "procedure": "machinery.plugin.v1alpha1.PluginService/Plan",
+      "request": {
+        "caps": {
+          "timeSeconds": 60,
+          "outputBytes": 1024
+        },
+        "input": {
+          "graph": "vendors/example",
+          "commit": "0e6f5ed237dd52f9fe02a33f8c6b8ec653a3a2c3",
+          "run": {
+            "id": 7,
+            "url": "https://github.com/practice-library/machinery/actions/runs/7"
+          },
+          "now": "2026-10-31T12:00:00Z",
+          "policy": {
+            "userAgent": "practice-library-graphs/1 (+https://github.com/practice-library/graphs)",
+            "maxRequestsPerRun": 50,
+            "retryAfterMaxSeconds": 60,
+            "unreadableRunsBeforeIssue": 3,
+            "hosts": [
+              {
+                "host": "h1.example.com",
+                "vendor": "example",
+                "robots": {
+                  "url": "https://h1.example.com/robots.txt",
+                  "checkedAt": "2026-10-31T12:00:00Z",
+                  "verdict": "allowed"
+                },
+                "terms": {
+                  "url": "https://h1.example.com/terms",
+                  "checkedAt": "2026-10-31T12:00:00Z",
+                  "quote": "Automated reading is permitted."
+                },
+                "format": "html",
+                "maxRequestsPerRun": 5,
+                "minIntervalDays": 7,
+                "maxBytes": 2000000,
+                "timeoutSeconds": 30
+              },
+              {
+                "host": "h2.example.com",
+                "vendor": "example",
+                "robots": {
+                  "url": "https://h2.example.com/robots.txt",
+                  "checkedAt": "2026-10-31T12:00:00Z",
+                  "verdict": "allowed"
+                },
+                "terms": {
+                  "url": "https://h2.example.com/terms",
+                  "checkedAt": "2026-10-31T12:00:00Z",
+                  "quote": "Automated reading is permitted."
+                },
+                "format": "html",
+                "maxRequestsPerRun": 5,
+                "minIntervalDays": 7,
+                "maxBytes": 2000000,
+                "timeoutSeconds": 30
+              },
+              {
+                "host": "h3.example.com",
+                "vendor": "example",
+                "robots": {
+                  "url": "https://h3.example.com/robots.txt",
+                  "checkedAt": "2026-10-31T12:00:00Z",
+                  "verdict": "allowed"
+                },
+                "terms": {
+                  "url": "https://h3.example.com/terms",
+                  "checkedAt": "2026-10-31T12:00:00Z",
+                  "quote": "Automated reading is permitted."
+                },
+                "format": "html",
+                "maxRequestsPerRun": 5,
+                "minIntervalDays": 7,
+                "maxBytes": 2000000,
+                "timeoutSeconds": 30
+              },
+              {
+                "host": "h4.example.com",
+                "vendor": "example",
+                "robots": {
+                  "url": "https://h4.example.com/robots.txt",
+                  "checkedAt": "2026-10-31T12:00:00Z",
+                  "verdict": "allowed"
+                },
+                "terms": {
+                  "url": "https://h4.example.com/terms",
+                  "checkedAt": "2026-10-31T12:00:00Z",
+                  "quote": "Automated reading is permitted."
+                },
+                "format": "html",
+                "maxRequestsPerRun": 5,
+                "minIntervalDays": 7,
+                "maxBytes": 2000000,
+                "timeoutSeconds": 30
+              },
+              {
+                "host": "h5.example.com",
+                "vendor": "example",
+                "robots": {
+                  "url": "https://h5.example.com/robots.txt",
+                  "checkedAt": "2026-10-31T12:00:00Z",
+                  "verdict": "allowed"
+                },
+                "terms": {
+                  "url": "https://h5.example.com/terms",
+                  "checkedAt": "2026-10-31T12:00:00Z",
+                  "quote": "Automated reading is permitted."
+                },
+                "format": "html",
+                "maxRequestsPerRun": 5,
+                "minIntervalDays": 7,
+                "maxBytes": 2000000,
+                "timeoutSeconds": 30
+              }
+            ]
+          },
+          "nodes": [
+            {
+              "id": "rule.example.h1",
+              "type": "rule",
+              "name": "x",
+              "source": "https://h1.example.com/x",
+              "measuredAt": "2026-09-01",
+              "attrs": {
+                "verdict": "allowed",
+                "fetched_at": "2026-09-01T10:00:00Z",
+                "quote": "X."
+              },
+              "edges": []
+            },
+            {
+              "id": "rule.example.h2",
+              "type": "rule",
+              "name": "x",
+              "source": "https://h2.example.com/x",
+              "measuredAt": "2026-09-01",
+              "attrs": {
+                "verdict": "allowed",
+                "fetched_at": "2026-09-01T10:00:00Z",
+                "quote": "X."
+              },
+              "edges": []
+            },
+            {
+              "id": "rule.example.h3",
+              "type": "rule",
+              "name": "x",
+              "source": "https://h3.example.com/x",
+              "measuredAt": "2026-09-01",
+              "attrs": {
+                "verdict": "allowed",
+                "fetched_at": "2026-09-01T10:00:00Z",
+                "quote": "X."
+              },
+              "edges": []
+            },
+            {
+              "id": "rule.example.h4",
+              "type": "rule",
+              "name": "x",
+              "source": "https://h4.example.com/x",
+              "measuredAt": "2026-09-01",
+              "attrs": {
+                "verdict": "allowed",
+                "fetched_at": "2026-09-01T10:00:00Z",
+                "quote": "X."
+              },
+              "edges": []
+            },
+            {
+              "id": "rule.example.h5",
+              "type": "rule",
+              "name": "x",
+              "source": "https://h5.example.com/x",
+              "measuredAt": "2026-09-01",
+              "attrs": {
+                "verdict": "allowed",
+                "fetched_at": "2026-09-01T10:00:00Z",
+                "quote": "X."
+              },
+              "edges": []
+            }
+          ]
+        }
+      },
+      "expect": {
+        "code": "resource_exhausted",
+        "envelope": {
+          "ok": false
+        }
+      }
+    },
+    {
+      "name": "caps.timeSeconds true is invalid_argument, not 1 second",
+      "carries": "caps.timeSeconds true is exit 2, not 1 second",
+      "request": {
+        "caps": {
+          "timeSeconds": true,
+          "outputBytes": 1048576
+        }
+      },
+      "expect": {
+        "code": "invalid_argument",
+        "envelope": {
+          "ok": false
+        }
+      }
+    },
+    {
+      "name": "a negative caps.timeSeconds is invalid_argument",
+      "carries": "a negative caps.timeSeconds is exit 2",
+      "request": {
+        "caps": {
+          "timeSeconds": -1,
+          "outputBytes": 1048576
+        }
+      },
+      "expect": {
+        "code": "invalid_argument",
+        "envelope": {
+          "ok": false
+        }
+      }
+    },
+    {
+      "name": "caps.outputBytes below 1024 is invalid_argument, and the refusal still fits in it",
+      "carries": "caps.outputBytes below 1024 is exit 2, and the refusal still fits in it",
+      "request": {
+        "caps": {
+          "timeSeconds": 60,
+          "outputBytes": 100
+        }
+      },
+      "expect": {
+        "code": "invalid_argument",
+        "envelope": {
+          "ok": false
+        }
+      }
+    },
+    {
+      "name": "describe with an input is invalid_argument",
+      "carries": "describe with an input is exit 2",
+      "request": {
+        "input": {}
+      },
+      "expect": {
+        "code": "invalid_argument",
+        "envelope": {
+          "ok": false
+        }
+      }
+    },
+    {
+      "name": "an unknown top-level key is invalid_argument",
+      "carries": "an unknown top-level key is exit 2",
+      "request": {
+        "debug": true
+      },
+      "expect": {
+        "code": "invalid_argument",
+        "envelope": {
+          "ok": false
+        }
+      }
+    },
+    {
+      "name": "a key given twice is invalid_argument",
+      "carries": "a key given twice is exit 2",
+      "rawBody": "{\"caps\": {\"timeSeconds\": 60, \"timeSeconds\": 61, \"outputBytes\": 1048576}}",
+      "expect": {
+        "code": "invalid_argument"
+      }
+    },
+    {
+      "name": "NaN is not JSON: invalid_argument",
+      "carries": "NaN is not JSON: exit 2",
+      "rawBody": "{\"caps\": {\"timeSeconds\": NaN, \"outputBytes\": 1048576}}",
+      "expect": {
+        "code": "invalid_argument"
+      }
+    },
+    {
+      "name": "a lone surrogate escaped in a string is invalid_argument",
+      "carries": "a lone surrogate escaped in a string is exit 2, with an envelope",
+      "procedure": "machinery.plugin.v1alpha1.PluginService/Plan",
+      "rawBody": "{\"caps\": {\"timeSeconds\": 60, \"outputBytes\": 1048576}, \"input\": {\"graph\": \"\\ud800\"}}",
+      "expect": {
+        "code": "invalid_argument"
+      }
+    },
+    {
+      "name": "network {} on RunUnit is an empty hosts: the unit's host is not listed, invalid_argument from the plugin",
+      "procedure": "machinery.plugin.v1alpha1.PluginService/RunUnit",
+      "request": {
+        "network": {},
+        "input": {
+          "id": "host:docs.example.com",
+          "shardKey": "docs.example.com",
+          "pacing": {
+            "minIntervalSeconds": 2.0
+          },
+          "budget": {
+            "requests": 10
+          },
+          "host": {
+            "host": "docs.example.com",
+            "format": "html",
+            "maxBytes": 2000000,
+            "timeoutSeconds": 30
+          },
+          "userAgent": "practice-library-graphs/1 (+https://github.com/practice-library/graphs)",
+          "retryAfterMaxSeconds": 60,
+          "facts": [
+            {
+              "node": "rule.example.a",
+              "source": "https://docs.example.com/a",
+              "measuredAt": "2026-09-01",
+              "quote": {
+                "text": "Each key may send 20 requests per second."
+              }
+            },
+            {
+              "node": "rule.example.b",
+              "source": "https://docs.example.com/b",
+              "measuredAt": "2026-09-02",
+              "quote": {
+                "text": "The free plan includes 1,000 calls."
+              }
+            }
+          ]
+        }
+      },
+      "expect": {
+        "code": "invalid_argument",
+        "envelope": {
+          "ok": false,
+          "warnings": [
+            {
+              "$startsWith": "the unit's host"
+            }
+          ]
+        }
+      },
+      "added": true
+    },
+    {
+      "name": "replay without exchanges: every URL is a network error, so the unit aborts",
+      "procedure": "machinery.plugin.v1alpha1.PluginService/RunUnit",
+      "request": {
+        "network": {
+          "replay": {
+            "start": "2026-10-31T12:00:00Z"
+          }
+        },
+        "input": {
+          "id": "host:docs.example.com",
+          "shardKey": "docs.example.com",
+          "pacing": {
+            "minIntervalSeconds": 2.0
+          },
+          "budget": {
+            "requests": 10
+          },
+          "host": {
+            "host": "docs.example.com",
+            "format": "html",
+            "maxBytes": 2000000,
+            "timeoutSeconds": 30
+          },
+          "userAgent": "practice-library-graphs/1 (+https://github.com/practice-library/graphs)",
+          "retryAfterMaxSeconds": 60,
+          "facts": [
+            {
+              "node": "rule.example.a",
+              "source": "https://docs.example.com/a",
+              "measuredAt": "2026-09-01",
+              "quote": {
+                "text": "Each key may send 20 requests per second."
+              }
+            },
+            {
+              "node": "rule.example.b",
+              "source": "https://docs.example.com/b",
+              "measuredAt": "2026-09-02",
+              "quote": {
+                "text": "The free plan includes 1,000 calls."
+              }
+            }
+          ]
+        }
+      },
+      "expect": {
+        "code": "ok",
+        "envelope": {
+          "ok": true,
+          "data": {
+            "results": []
+          }
+        }
+      },
+      "added": true
+    }
+  ],
+  "notCarried": [
+    {
+      "name": "a contract that is not digits is exit 2",
+      "why": "the request names no contract: the package in the call's path is the version, and a package the plugin does not serve is the unimplemented case"
+    }
+  ]
+}
