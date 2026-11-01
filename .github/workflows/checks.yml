@@ -23,6 +23,12 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Install requirements.txt, pinned by hash
+        run: |
+          set -euo pipefail
+          python3 -m venv "$RUNNER_TEMP/venv"
+          "$RUNNER_TEMP/venv/bin/python" -m pip install --require-hashes --only-binary :all: -r requirements.txt
+          echo "$RUNNER_TEMP/venv/bin" >> "$GITHUB_PATH"
       - name: Unit tests on recorded fixtures, with the network refused
         run: python3 -m unittest discover -s tests -t . -v
       - name: Each guard, removed, makes its test fail

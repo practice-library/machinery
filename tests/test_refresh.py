@@ -8,7 +8,7 @@ import unittest
 
 from factrefresh.graphs import find_graphs, load_policy
 from factrefresh.refresh import Refresher, plain_url
-from tests.support import COMMIT, GRAPHS, FIXTURES, RUN_URL, FakeClock, GraphsCopy, Replay, edit_policy, exchanges
+from tests.support import COMMIT, GRAPHS, FIXTURES, RUN_URL, FakeClock, GraphsCopy, Replay, edit_policy, exchanges, pdf
 
 UA = "practice-library-graphs/1 (+https://github.com/practice-library/graphs)"
 
@@ -182,6 +182,68 @@ class Unreachable(unittest.TestCase):
         rec = exchanges()
         rec["https://docs.example.com/plans"] = [{"status": 200, "headers": {"content-type": "application/pdf"}, "body": "%PDF"}]
         self.assertEqual(by_node(run(recorded=rec)[0])["plan.example.free"]["outcome"], "unreadable")
+
+
+class PdfPages(unittest.TestCase):
+    """help.example.com switched to format pdf; its one fact is term.example.support."""
+    URL = "https://help.example.com/support.txt"
+    NODE = "term.example.support"
+
+    def refresh(self, body: bytes, ctype="application/pdf", max_bytes=None, quote=None):
+        def to_pdf(policy):
+            for h in policy["hosts"]:
+                if h["host"] == "help.example.com":
+                    h["format"] = "pdf"
+                    if max_bytes is not None:
+                        h["maxBytes"] = max_bytes
+        with GraphsCopy() as root:
+            edit_policy(root, to_pdf)
+            if quote is not None:
+                path = os.path.join(root, "vendors/example/graph/nodes", self.NODE + ".json")
+                with open(path, encoding="utf-8") as f:
+                    node = json.load(f)
+                node["attrs"]["quote"] = quote
+                with open(path, "w", encoding="utf-8") as f:
+                    json.dump(node, f)
+            rec = exchanges()
+            rec[self.URL] = [{"status": 200, "headers": {"content-type": ctype} if ctype else {}, "bytes": body}]
+            return by_node(run(root=root, recorded=rec)[0])[self.NODE]
+
+    def test_quote_in_the_pdf_text_is_unchanged(self):
+        r = self.refresh(pdf("Support answers within", "two business days."))
+        self.assertEqual(r["outcome"], "unchanged")
+
+    def test_quote_not_in_the_pdf_text_is_changed(self):
+        r = self.refresh(pdf("Support answers within three business days."))
+        self.assertEqual(r["outcome"], "changed")
+
+    def test_a_pdf_served_without_a_content_type_is_read(self):
+        self.assertEqual(self.refresh(pdf("Support answers within two business days."), ctype=None)["outcome"],
+                         "unchanged")
+
+    def test_a_pdf_host_answering_html_is_unreadable(self):
+        r = self.refresh(b"<p>Support answers within two business days.</p>", ctype="text/html")
+        self.assertEqual(r["outcome"], "unreadable")
+        self.assertEqual(r["reason"], "unreadable: not a PDF (text/html)")
+
+    def test_a_truncated_pdf_is_unreadable(self):
+        data = pdf("Support answers within two business days.")
+        r = self.refresh(data[:len(data) // 2])
+        self.assertEqual(r["outcome"], "unreadable")
+        self.assertIn("cannot be read", r["reason"])
+
+    def test_max_bytes_counts_the_downloaded_bytes(self):
+        data = pdf("Support answers within two business days.")
+        self.assertEqual(self.refresh(data, max_bytes=len(data))["outcome"], "unchanged")
+        r = self.refresh(data, max_bytes=len(data) - 1)
+        self.assertEqual(r["outcome"], "unreadable")
+        self.assertIn("maxBytes", r["reason"])
+
+    def test_a_quote_stored_as_table_cells_is_unreadable_on_a_pdf_never_changed(self):
+        r = self.refresh(pdf("Support | answers within two business days."),
+                         quote="| Support | answers within two business days. |")
+        self.assertEqual(r["outcome"], "unreadable")
+        self.assertIn("table cells", r["reason"])
 
 
 class Hardening(unittest.TestCase):

@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+import io
 import unittest
 
+import pypdf
+
 from factrefresh import robots
-from factrefresh.text import has_quote, page_text
+from factrefresh.text import Unreadable, has_quote, page_text, pdf_text
+from tests.support import pdf
 
 UA = "practice-library-graphs/1 (+https://github.com/practice-library/graphs)"
 
@@ -25,6 +29,40 @@ class Text(unittest.TestCase):
 
     def test_text_format_is_matched_as_it_is(self):
         self.assertTrue(has_quote(page_text("a <b> c", "text"), "a <b> c"))
+
+
+def encrypted(data: bytes) -> bytes:
+    writer = pypdf.PdfWriter(clone_from=io.BytesIO(data))
+    writer.encrypt("", "owner", algorithm="RC4-128")  # an empty user password: any reader could open it
+    out = io.BytesIO()
+    writer.write(out)
+    return out.getvalue()
+
+
+class Pdf(unittest.TestCase):
+    def test_a_sentence_in_the_pdf_is_found_and_one_not_in_it_is_not(self):
+        text = pdf_text(pdf("Notices are published", "within seven days."))
+        self.assertTrue(has_quote(text, "Notices are published within seven days."))
+        self.assertFalse(has_quote(text, "Notices are published within eight days."))
+
+    def test_a_truncated_pdf_is_unreadable(self):
+        data = pdf("Notices are published within seven days.")
+        for cut in (len(data) // 2, data.index(b"xref"), len(data) - 7):  # half, no trailer, no %%EOF
+            with self.subTest(cut=cut), self.assertRaisesRegex(Unreadable, "^unreadable: the PDF cannot be read"):
+                pdf_text(data[:cut])
+
+    def test_an_encrypted_pdf_is_unreadable_even_with_an_empty_password(self):
+        with self.assertRaisesRegex(Unreadable, "^unreadable: the PDF is encrypted"):
+            pdf_text(encrypted(pdf("Notices are published within seven days.")))
+
+    def test_a_pdf_without_text_is_unreadable_never_a_page_where_every_quote_is_gone(self):
+        with self.assertRaisesRegex(Unreadable, "^unreadable: the PDF has no text layer"):
+            pdf_text(pdf())
+
+    def test_a_body_that_is_not_a_pdf_is_unreadable(self):
+        for body in (b"", b"<html><p>Notices are published within seven days.</p>", b" %PDF-1.4"):
+            with self.subTest(body=body), self.assertRaisesRegex(Unreadable, "^unreadable: not a PDF"):
+                pdf_text(body)
 
 
 class Robots(unittest.TestCase):

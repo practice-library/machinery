@@ -27,7 +27,7 @@ from urllib.parse import urljoin, urlsplit
 from . import robots as robotstxt
 from .graphs import Host, Policy, load_nodes
 from .http import Response, TransportError
-from .text import has_cells, has_quote, page_rows, page_text, quote_form, quote_is_empty
+from .text import PDF_MIME, Unreadable, has_cells, has_quote, page_rows, page_text, pdf_text, quote_form, quote_is_empty
 
 REDIRECTS = (301, 302, 303, 307, 308)
 MAX_HOPS = 5
@@ -70,7 +70,7 @@ class Page:
     status: Optional[int] = None
     final_url: Optional[str] = None
     text: Optional[str] = None  # set only when the page was read
-    rows: List[List[str]] = field(default_factory=list)  # its tables' rows, for a quote stored as cells
+    rows: Optional[List[List[str]]] = field(default_factory=list)  # its tables' rows, for a quote stored as cells; None for a PDF
     reason: Optional[str] = None  # why it could not be read
     retry_after: Optional[int] = None
 
@@ -218,11 +218,20 @@ class Refresher:
                 return Page(at, status=resp.status, reason=f"unreachable: HTTP {resp.status}")
             ctype = resp.headers.get("content-type", "")
             mime = ctype.split(";", 1)[0].strip().lower()
-            if mime and not (mime.startswith("text/") or mime in TEXT_TYPES or mime.endswith("+json")):
-                return Page(at, status=resp.status, final_url=url, reason=f"unreadable: not text ({mime})")
+            pdf = host.format == "pdf"
+            if mime and not ((mime == PDF_MIME) if pdf else
+                             (mime.startswith("text/") or mime in TEXT_TYPES or mime.endswith("+json"))):
+                return Page(at, status=resp.status, final_url=url,
+                            reason=f"unreadable: not {'a PDF' if pdf else 'text'} ({mime})")
             if resp.truncated:
                 return Page(at, status=resp.status, final_url=url,
                             reason=f"unreadable: larger than maxBytes ({host.max_bytes}) of {host.host}")
+            if pdf:
+                try:
+                    text = pdf_text(resp.body)
+                except Unreadable as err:
+                    return Page(at, status=resp.status, final_url=url, reason=str(err)[:300])
+                return Page(at, status=resp.status, final_url=url, text=text, rows=None)
             m = re.search(r"charset=([\w.-]+)", ctype, re.I)
             try:
                 body = resp.body.decode(m.group(1) if m else "utf-8", "replace")
@@ -348,6 +357,10 @@ class Refresher:
         if quote_is_empty(" ".join(cells) if cells is not None else quote["text"]):
             r["outcome"] = "unreadable"
             r["reason"] = "unreadable: the stored quote is empty, so nothing can be confirmed"
+            return r
+        if cells is not None and page.rows is None:
+            r["outcome"] = "unreadable"
+            r["reason"] = "unreadable: a quote stored as table cells cannot be matched in a PDF's text"
             return r
         if has_cells(page.rows, cells) if cells is not None else has_quote(page.text, quote["text"]):
             r["outcome"] = "unchanged"

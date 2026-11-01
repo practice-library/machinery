@@ -57,7 +57,9 @@ class Replay:
         r = queue.pop(0)
         if r.get("error"):
             raise TransportError(r["error"])
-        if "file" in r:
+        if "bytes" in r:
+            body = r["bytes"]
+        elif "file" in r:
             with open(os.path.join(HTTP, r["file"]), "rb") as f:
                 body = f.read()
         else:
@@ -89,3 +91,28 @@ def edit_policy(root: str, fn) -> None:
     fn(data)
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2)
+
+
+def pdf(*runs: str) -> bytes:
+    """A minimal valid PDF with one page that shows each text run on its own line (ASCII only). Built here
+    rather than stored, so every byte of a PDF fixture is readable in review."""
+    lines = " ".join(f"({t}) Tj 0 -20 Td" for t in runs)
+    stream = f"BT /F1 12 Tf 72 720 Td {lines} ET".encode("ascii")
+    objects = [
+        b"<< /Type /Catalog /Pages 2 0 R >>",
+        b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+        b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 5 0 R >> >> "
+        b"/Contents 4 0 R >>",
+        b"<< /Length %d >>\nstream\n" % len(stream) + stream + b"\nendstream",
+        b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+    ]
+    out = bytearray(b"%PDF-1.4\n")
+    offsets = []
+    for i, body in enumerate(objects, 1):
+        offsets.append(len(out))
+        out += b"%d 0 obj\n" % i + body + b"\nendobj\n"
+    xref = len(out)
+    out += b"xref\n0 %d\n0000000000 65535 f \n" % (len(objects) + 1)
+    out += b"".join(b"%010d 00000 n \n" % o for o in offsets)
+    out += b"trailer\n<< /Size %d /Root 1 0 R >>\nstartxref\n%d\n%%%%EOF\n" % (len(objects) + 1, xref)
+    return bytes(out)

@@ -1,0 +1,4 @@
+# Installed with: python3 -m pip install --require-hashes --only-binary :all: -r requirements.txt
+# pypdf reads the text of a source page whose host has format pdf. Pure Python: no system package.
+pypdf==6.21.4 \
+    --hash=sha256:33e4fb41ca352810eb4e9838aa0d82d6888a5f8bf682f43e99cce5faa666255c
