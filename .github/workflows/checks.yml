@@ -109,10 +109,10 @@ jobs:
         run: |
           set -euo pipefail
           python3 conformance/v0_bridge.py --plugin "$PWD/bin/fact-refresh-plugin" > "$RUNNER_TEMP/bridge.url" &
+          trap 'kill %1' EXIT
           for _ in $(seq 100); do [ -s "$RUNNER_TEMP/bridge.url" ] && break; sleep 0.1; done
           python3 conformance/connect_run.py --url "$(head -1 "$RUNNER_TEMP/bridge.url")" \
             --report-schema "$REPORT_SCHEMA" --validator jsonschema
-          kill %1
 
   proto:
     name: proto

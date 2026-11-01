@@ -380,6 +380,7 @@ def fit(code: int, envelope: dict, cap: Optional[int]) -> Tuple[int, bytes]:
     out = dump(envelope)
     if cap is None or len(out) <= cap:
         return code, out
+    # conformance/v0_bridge.py reads "larger than outputBytes" as resource_exhausted: keep the words
     if envelope["ok"]:
         code, envelope = FAILED, failure(f"the answer is larger than outputBytes ({cap})")
     message = envelope["warnings"][0]

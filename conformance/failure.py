@@ -55,8 +55,6 @@ def _fields(buf: bytes):
             value, i = buf[i:i + n], i + n
         else:
             raise Malformed(f"wire type {wire} is not used by these messages")
-        if number == 0:
-            raise Malformed("field number 0")
         yield number, wire, value
 
 

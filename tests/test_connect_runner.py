@@ -3,10 +3,14 @@ it one way, and the Failure codec (conformance/failure.py). HTTP is stubbed: tes
 Each check is also mutated in tests/guards.py."""
 from __future__ import annotations
 
+import http.client
 import io
 import json
 import os
+import socket
 import sys
+import threading
+import time
 import unittest
 import urllib.error
 from unittest import mock
@@ -17,6 +21,7 @@ sys.path.insert(0, os.path.join(ROOT, "conformance"))
 import carry  # noqa: E402
 import connect_run  # noqa: E402
 import failure  # noqa: E402
+import v0_bridge  # noqa: E402
 
 SERVICE = "machinery.plugin.v1alpha1.PluginService"
 DESCRIBE = {"name": "describe", "procedure": f"{SERVICE}/Describe", "expect": {"code": "ok", "envelope": {"ok": True}}}
@@ -101,6 +106,23 @@ class Success(unittest.TestCase):
             with self.subTest(body=body):
                 self.assertIsNotNone(answer(DESCRIBE, 200, body))
 
+    def test_a_success_fixture_given_as_a_raw_body_is_checked_as_its_request(self):
+        case = dict(DESCRIBE, rawBody='{"caps": {"timeSeconds": 1, "outputBytes": 4096}}')
+        self.assertIsNone(answer(case, 200, GOOD))
+        self.assertIn("ok true", answer(case, 200, dict(GOOD, ok=False)))
+        # Plan's invariants read the request's input: the raw body is that request
+        raw = json.dumps({"caps": {"timeSeconds": 1, "outputBytes": 4096}, "input": {"policy": {"maxRequestsPerRun": 1}}})
+        plan = {"name": "plan", "procedure": f"{SERVICE}/Plan", "rawBody": raw, "expect": {"code": "ok"}}
+        data = {"maxParallel": 1, "units": [{"budget": {"requests": 2}}]}
+        self.assertIn("budgets add up", answer(plan, 200, dict(GOOD, data=data)))
+        self.assertEqual(answer(dict(plan, rawBody="[1]"), 200, GOOD), "a success fixture's body must be a JSON object")
+
+    def test_the_fixtures_own_input_is_checked_unless_it_expects_a_refused_request(self):
+        why = answer(refused(), 400, error_body("failed_precondition"), validator=Picky("mergeInput"))
+        self.assertTrue(why.startswith("the fixture's own request is not valid"), why)
+        case = dict(refused(), expect={"code": "invalid_argument"})
+        self.assertIsNone(answer(case, 400, error_body("invalid_argument", envelope=None, message="no"), validator=Picky("mergeInput")))
+
     def test_an_error_when_a_success_is_expected_fails(self):
         self.assertIn("HTTP 400", answer(DESCRIBE, 400, error_body("invalid_argument")))
 
@@ -149,6 +171,10 @@ class Errors(unittest.TestCase):
         for status, body, said in cases:
             with self.subTest(body=body):
                 self.assertIn(said, answer(refused(), status, body))
+
+    def test_details_null_is_not_read_as_left_out(self):
+        why = answer(refused("invalid_argument"), 400, error_body("invalid_argument", envelope=None, message="no", details=None))
+        self.assertEqual(why, "the error's details is not a list")
 
     def test_two_failure_details_fail(self):
         body = json.loads(error_body("failed_precondition"))
@@ -223,8 +249,9 @@ class Codec(unittest.TestCase):
 
     def test_malformed_values_are_refused_never_read_as_empty(self):
         # not base64, a cut varint, a cut string, warnings as a varint, wire type 5, field number 0, a string
-        # that is not UTF-8, an unknown NotRead field, an unknown Struct entry field (inside data)
-        for value in ("!!", "CP8", "IgI", "IAE", "JQ", "AAA", "IgH/", "GgIYAQ", "EgYqBAoCGAE", 7):
+        # that is not UTF-8, an unknown NotRead field, an unknown Struct entry field (inside data), an unknown
+        # Struct field and an unknown ListValue field (each inside data)
+        for value in ("!!", "CP8", "IgI", "IAE", "JQ", "AAA", "IgH/", "GgIYAQ", "EgYqBAoCGAE", "EgQqAhAB", "EgQyAhAB", 7):
             with self.subTest(value=value), self.assertRaises(failure.Malformed):
                 failure.decode(value)
 
@@ -246,3 +273,82 @@ class Carry(unittest.TestCase):
             accounted |= {c["name"] for c in group.get("notCarried", [])}
             self.assertTrue(all("carries" in c or c.get("added") for c in group["cases"]), name)
         self.assertEqual(accounted, v0)
+
+    def test_each_case_outside_changed_is_carried_as_it_is(self):
+        # derived here, not through carry.expect_of: the request less contract and verb, the exit code as its
+        # Connect code, ok, data and notRead as the expected envelope, and about and why, all with v0 paths
+        def v1(value):  # the path rewrite, done here on the JSON text rather than by carry.v1
+            return json.loads(json.dumps(value).replace("/contract/v0/", "/contract/v1alpha1/"))
+
+        carried, group_procedure = {}, {}
+        for text in carry.render().values():
+            group = json.loads(text)
+            carried.update({c["carries"]: c for c in group["cases"] if "carries" in c})
+            group_procedure.update({c["name"]: group["procedure"] for c in group["cases"]})
+        checked = 0
+        for name in sorted(os.listdir(carry.V0)):
+            with open(os.path.join(carry.V0, name), encoding="utf-8") as f:
+                v0_group = json.load(f)
+            cases, verb = v0_group["cases"], v0_group["verb"]
+            for v0 in cases:
+                if v0["name"] in carry.CHANGED:
+                    continue
+                c, want = carried[v0["name"]], v0.get("expect", {})
+                with self.subTest(case=v0["name"]):
+                    request = {k: v for k, v in v0.get("request", {}).items() if k not in ("contract", "verb")}
+                    self.assertEqual(c["request"], v1(request))
+                    self.assertEqual(c.get("procedure", group_procedure[c["name"]]),
+                                     f"{carry.SERVICE}/{carry.CALL[v0.get('verb', verb)]}")
+                    code = {0: "ok", 1: "failed_precondition", 2: "invalid_argument", 3: "unimplemented", 75: "unavailable"}
+                    self.assertEqual(c["expect"]["code"], code[want.get("exit", 0)])
+                    env = c["expect"]["envelope"]
+                    self.assertEqual(env["ok"], want.get("ok", want.get("exit", 0) == 0))
+                    for key in ("data", "notRead"):
+                        self.assertEqual(env.get(key), v1(want[key]) if key in want else None, key)
+                    for key in ("about", "why"):
+                        self.assertEqual(c.get(key), v0.get(key), key)
+                checked += 1
+        self.assertGreater(checked, 50)
+
+
+class Bridge(unittest.TestCase):
+    """conformance/v0_bridge.py's own transport, which no fixture reaches: 415, Content-Length and the deadline.
+    The handler is driven over a socket pair, so nothing connects."""
+
+    def setUp(self):
+        self.saved = v0_bridge.Handler.plugin
+        v0_bridge.Handler.plugin = [sys.executable, "-c", "import time; time.sleep(5)"]
+
+    def tearDown(self):
+        v0_bridge.Handler.plugin = self.saved
+
+    def send(self, headers, body=b'{"caps": {"timeSeconds": 60, "outputBytes": 4096}}'):
+        ours, theirs = socket.socketpair()
+        ours.settimeout(10)  # a bridge that never answers fails the test instead of hanging it
+        served = threading.Thread(target=v0_bridge.Handler, args=(theirs, ("127.0.0.1", 0), None), daemon=True)
+        served.start()
+        headers = dict({"Content-Length": str(len(body))}, **headers)
+        head = "".join(f"{k}: {v}\r\n" for k, v in headers.items())
+        ours.sendall(f"POST /{SERVICE}/Describe HTTP/1.0\r\n{head}\r\n".encode("latin-1") + body)  # as servers read headers
+        resp = http.client.HTTPResponse(ours)
+        resp.begin()
+        out = resp.status, resp.read()
+        served.join(10)
+        ours.close()
+        theirs.close()
+        return out
+
+    def test_a_body_that_is_not_json_by_content_type_is_415(self):
+        self.assertEqual(self.send({"Content-Type": "text/plain"})[0], 415)
+
+    def test_a_content_length_that_is_not_a_number_is_invalid_argument(self):
+        for value in ("abc", "-1", "1e3", "\u00b2", "1\u00b9", "12345678901"):  # ² and ¹ are digits to isdigit
+            with self.subTest(value=value):
+                status, body = self.send({"Content-Type": "application/json", "Content-Length": value}, b"")
+                self.assertEqual((status, json.loads(body)["code"]), (400, "invalid_argument"))
+
+    def test_the_plugin_is_stopped_at_connect_timeout_ms(self):
+        started = time.monotonic()
+        status, body = self.send({"Content-Type": "application/json", "Connect-Timeout-Ms": "200"})
+        self.assertEqual((status, json.loads(body)["code"]), (504, "deadline_exceeded"))
+        self.assertLess(time.monotonic() - started, 3)

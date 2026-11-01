@@ -156,6 +156,7 @@ def check_error(validator, status, ctype, data, expect):
         return f"code {code} with HTTP {status}, expected HTTP {HTTP_STATUS[code]}"
     if code != expect["code"]:
         return f"code {code} (HTTP {status}), expected {expect['code']}"
+    # details may be left out; null is not read as left out (Connect writes a list or nothing)
     if connect and not isinstance(body.get("details", []), list):
         return "the error's details is not a list"
     details = [d for d in body.get("details", []) if isinstance(d, dict) and d.get("type") == failure.TYPE] if connect else []
@@ -181,12 +182,21 @@ def check_error(validator, status, ctype, data, expect):
     return matches(envelope, expect.get("envelope", {}), "failure")
 
 
+def _object(text):
+    try:
+        value = json.loads(text)
+    except ValueError:
+        return None
+    return value if isinstance(value, dict) else None
+
+
 def run_fixture(url, validator, group, case):
     procedure = case.get("procedure", group["procedure"])
     call = procedure.rsplit("/", 1)[1]
     expect = case["expect"]
     if "rawBody" in case:
-        request, body = None, case["rawBody"].encode("utf-8")
+        body = case["rawBody"].encode("utf-8")
+        request = _object(case["rawBody"])  # the request it states, when it is a JSON object
     else:
         request = deep_merge(group.get("defaults", {}), case.get("request", {}))
         body = json.dumps(request).encode("utf-8")
@@ -202,6 +212,8 @@ def run_fixture(url, validator, group, case):
     if why:
         return why
     if expect["code"] == "ok":
+        if request is None:
+            return "a success fixture's body must be a JSON object"
         return check_success(validator, call, request, status, ctype, data, expect)
     return check_error(validator, status, ctype, data, expect)
 
