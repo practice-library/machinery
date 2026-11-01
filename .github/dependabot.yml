@@ -1,5 +1,6 @@
 # The consumer template of practice-library/.github: Dependabot proposes new pins for the reusable
-# workflows and actions used here, and for the hash-pinned requirements.txt.
+# workflows and actions used here, for the hash-pinned requirements.txt, and for the generators in gen/
+# (a generator bump changes the generated code, so CI fails until it is regenerated in the same pull request).
 version: 2
 updates:
   - package-ecosystem: github-actions
@@ -9,6 +10,16 @@ updates:
     open-pull-requests-limit: 5
   - package-ecosystem: pip
     directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+  - package-ecosystem: pip
+    directory: /gen
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+  - package-ecosystem: gomod
+    directory: /gen/go
     schedule:
       interval: weekly
     open-pull-requests-limit: 5

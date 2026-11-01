@@ -15,6 +15,7 @@ import tempfile
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 R, O = "factrefresh/refresh.py", "factrefresh/opener.py"
 T, P = "tests.test_refresh", "tests.test_opener"
+B, W = "gen/python/build_wheel.py", "tests.test_gen_wheel"
 
 GUARDS = [
     # (what the guard keeps true, file, code, code without the guard, the test that must then fail)
@@ -534,6 +535,29 @@ GUARDS = [
     ("a mid-body OSError is a transport error", "factrefresh/http.py",
      "except (socket.timeout, ConnectionError, OSError) as err:", "except (socket.timeout, ConnectionError) as err:",
      "tests.test_http.Gaps.test_an_os_error_in_the_middle_of_the_body_is_a_transport_error"),
+    # gen/python/build_wheel.py: the release wheel is the same bytes from the same files
+    ("the wheel's entries are dated 1980-01-01", B, "zipfile.ZipInfo(name, EPOCH)",
+     "zipfile.ZipInfo(name, (2026, 1, 1, 0, 0, 0))", f"{W}.Wheel.test_every_entry_is_dated_1980_mode_0644_and_stored"),
+    ("the wheel's entries have mode 0644", B, "info.external_attr = 0o100644 << 16", "pass",
+     f"{W}.Wheel.test_every_entry_is_dated_1980_mode_0644_and_stored"),
+    ("the wheel's entries are stored, not deflated", B, "info.compress_type = zipfile.ZIP_STORED",
+     "info.compress_type = zipfile.ZIP_DEFLATED", f"{W}.Wheel.test_every_entry_is_dated_1980_mode_0644_and_stored"),
+    ("the wheel holds only .py files", B, 'if name.endswith(".py"):', "if True:",
+     f"{W}.Wheel.test_only_the_packages_py_files_and_the_dist_info"),
+    ("the wheel's files are in sorted order", B, "return sorted(found)", "return found",
+     f"{W}.Sources.test_sorted_whatever_order_the_directory_lists"),
+    ("a tree without generated messages is refused", B, "if not any(", "if False and any(",
+     f"{W}.Sources.test_a_tree_without_generated_messages_is_refused"),
+    ("gen/VERSION is exactly one line X.Y.Z", B, "VERSION_RE.fullmatch(text)", "VERSION_RE.match(text)",
+     f"{W}.Version.test_anything_else_is_refused"),
+    ("gen/VERSION digits are ASCII", B, r'VERSION_RE = re.compile(r"(0|[1-9][0-9]*)\.', r'VERSION_RE = re.compile(r"(0|[1-9]\d*)\.',
+     f"{W}.Version.test_anything_else_is_refused"),
+    ("RECORD gives each entry's size", B, ",{len(d)}\\n\" for p, d in entries)", ",0\\n\" for p, d in entries)",
+     f"{W}.Wheel.test_record_hashes_and_sizes_every_other_entry"),
+    ("RECORD's hashes are unpadded", B, '.rstrip(b"=")', "",
+     f"{W}.Wheel.test_record_hashes_and_sizes_every_other_entry"),
+    ("RECORD lists itself", B, ' + f"{dist}/RECORD,,\\n"', "",
+     f"{W}.Wheel.test_record_hashes_and_sizes_every_other_entry"),
 ]
 
 
@@ -548,7 +572,7 @@ def main() -> int:
             skipped += 1
             continue
         with tempfile.TemporaryDirectory() as tmp:
-            for d in ("factrefresh", "tests", "conformance", "contract", "bin"):
+            for d in ("factrefresh", "tests", "conformance", "contract", "bin", "gen"):
                 shutil.copytree(os.path.join(ROOT, d), os.path.join(tmp, d),
                                 ignore=shutil.ignore_patterns("__pycache__"))
             target = os.path.join(tmp, path)
