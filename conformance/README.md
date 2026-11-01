@@ -106,3 +106,7 @@ python3 conformance/connect_run.py --url http://127.0.0.1:8080 \
 - **failure:** `failed_precondition`, `resource_exhausted` and `unavailable` carry a `machinery.plugin.v1alpha1.Failure` detail. A detail is base64 of the binary message; `failure.py` decodes it without a protobuf library. It must validate as an envelope with `ok` false, `data` null and a warning, and the message must be its warnings joined by `; `.
 
 Until the plugin runs on a generated runtime (plan #17, PR 5), CI serves it through `v0_bridge.py`, which does what a runtime's transport does: routing, strict JSON, unknown fields, the deadline, integers written as integers, codes, the Failure detail, and an error body that fits `outputBytes`. The runner's own checks are tested in `tests/test_connect_runner.py` and mutated in `tests/guards.py`.
+
+## quoteOneLine: `quote-one-line.json`
+
+The requirement of `quoteOneLine` (machinery#32), which quotes an untrusted string for one-line terminal output, as data. `rule` states it, `defaultMax` is the default count of code points kept, and each case gives its `input` as code points (so a lone surrogate can be written), an optional `max`, and the exact `output`. Any implementation, in any language, must produce every `output`. The first one is `lib/js/quote-one-line.mjs`, run against this table by the `js` job (`tests/js/`).
