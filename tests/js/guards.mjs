@@ -28,8 +28,13 @@ const GUARDS = [
 
 function copy() {
   const tmp = mkdtempSync(join(tmpdir(), "quote-guard-"));
-  for (const d of ["lib/js", "tests/js"]) cpSync(join(ROOT, d), join(tmp, d), { recursive: true });
-  cpSync(join(ROOT, "conformance/quote-one-line.json"), join(tmp, "conformance/quote-one-line.json"));
+  try {
+    for (const d of ["lib/js", "tests/js"]) cpSync(join(ROOT, d), join(tmp, d), { recursive: true });
+    cpSync(join(ROOT, "conformance/quote-one-line.json"), join(tmp, "conformance/quote-one-line.json"));
+  } catch (err) {
+    rmSync(tmp, { recursive: true, force: true });  // the callers' finally never sees a folder copy() did not return
+    throw err;
+  }
   return tmp;
 }
 const test = (cwd) => spawnSync(process.execPath, ["--test", "tests/js/quote-one-line.test.mjs"], { cwd, encoding: "utf8" });
