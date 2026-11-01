@@ -93,6 +93,21 @@ def edit_policy(root: str, fn) -> None:
         json.dump(data, f, indent=2)
 
 
+def pdf_update(base: bytes, *runs: str) -> bytes:
+    """base (from pdf()) saved again as an incremental update whose page shows these runs instead: a second
+    revision appended after the first one's %%EOF, as an editor saves it."""
+    lines = " ".join(f"({t}) Tj 0 -20 Td" for t in runs)
+    stream = f"BT /F1 12 Tf 72 720 Td {lines} ET".encode("ascii")
+    prev = int(base.rsplit(b"startxref", 1)[1].split()[0])
+    out = bytearray(base)
+    offset = len(out)
+    out += b"4 0 obj\n<< /Length %d >>\nstream\n" % len(stream) + stream + b"\nendstream\nendobj\n"
+    xref = len(out)
+    out += b"xref\n4 1\n%010d 00000 n \n" % offset
+    out += b"trailer\n<< /Size 6 /Root 1 0 R /Prev %d >>\nstartxref\n%d\n%%%%EOF\n" % (prev, xref)
+    return bytes(out)
+
+
 def pdf(*runs: str) -> bytes:
     """A minimal valid PDF with one page that shows each text run on its own line (ASCII only). Built here
     rather than stored, so every byte of a PDF fixture is readable in review."""

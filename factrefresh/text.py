@@ -97,9 +97,12 @@ def pdf_text(data: bytes) -> str:
         raise Unreadable("unreadable: no PDF reader is installed (requirements.txt)")
     if not data.startswith(b"%PDF-"):
         raise Unreadable("unreadable: not a PDF (the body does not start with %PDF-)")
+    if not data.rstrip(b"\x00\t\n\f\r ").endswith(b"%%EOF"):
+        # A PDF saved more than once (an incremental update, or a linearized file) has an earlier %%EOF, and
+        # the reader below falls back to it: a file cut inside a later revision would read as the older one.
+        raise Unreadable("unreadable: the PDF is cut off (it does not end with %%EOF)")
     try:
-        # Not strict: published PDFs often break the specification in small ways a reader recovers from. A
-        # cut-off file is still refused (no %%EOF marker); tests.test_text.Pdf checks that on this pin.
+        # Not strict: published PDFs often break the specification in small ways a reader recovers from.
         reader = pypdf.PdfReader(io.BytesIO(data), strict=False)
         if reader.is_encrypted:
             raise Unreadable("unreadable: the PDF is encrypted")

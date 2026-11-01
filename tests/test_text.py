@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import io
+import sys
 import unittest
-
-import pypdf
+from unittest import mock
 
 from factrefresh import robots
 from factrefresh.text import Unreadable, has_quote, page_text, pdf_text
-from tests.support import pdf
+from tests.support import pdf, pdf_update
 
 UA = "practice-library-graphs/1 (+https://github.com/practice-library/graphs)"
 
@@ -32,6 +32,8 @@ class Text(unittest.TestCase):
 
 
 def encrypted(data: bytes) -> bytes:
+    import pypdf  # imported here, as in factrefresh.text, so the other tests here run without it
+
     writer = pypdf.PdfWriter(clone_from=io.BytesIO(data))
     writer.encrypt("", "owner", algorithm="RC4-128")  # an empty user password: any reader could open it
     out = io.BytesIO()
@@ -48,8 +50,25 @@ class Pdf(unittest.TestCase):
     def test_a_truncated_pdf_is_unreadable(self):
         data = pdf("Notices are published within seven days.")
         for cut in (len(data) // 2, data.index(b"xref"), len(data) - 7):  # half, no trailer, no %%EOF
-            with self.subTest(cut=cut), self.assertRaisesRegex(Unreadable, "^unreadable: the PDF cannot be read"):
+            with self.subTest(cut=cut), self.assertRaisesRegex(Unreadable, "^unreadable: the PDF is cut off"):
                 pdf_text(data[:cut])
+
+    def test_a_pdf_saved_twice_reads_its_last_revision(self):
+        data = pdf_update(pdf("Notices are published within seven days."), "Notices are published within ten days.")
+        self.assertEqual(pdf_text(data), "Notices are published within ten days.")
+        self.assertEqual(pdf_text(data + b"\r\n\x00 "), "Notices are published within ten days.")
+
+    def test_a_pdf_cut_inside_its_last_revision_is_unreadable_never_its_older_text(self):
+        old = pdf("Notices are published within seven days.")
+        data = pdf_update(old, "Notices are published within ten days.")
+        for cut in (len(old) + (len(data) - len(old)) // 2, len(data) - 7, len(data) - 2):  # mid-revision, before and inside %%EOF
+            with self.subTest(cut=cut), self.assertRaisesRegex(Unreadable, "^unreadable: the PDF is cut off"):
+                pdf_text(data[:cut])
+
+    def test_without_the_pdf_reader_installed_a_pdf_is_unreadable(self):
+        with mock.patch.dict(sys.modules, {"pypdf": None}):
+            with self.assertRaisesRegex(Unreadable, "^unreadable: no PDF reader is installed"):
+                pdf_text(pdf("Notices are published within seven days."))
 
     def test_an_encrypted_pdf_is_unreadable_even_with_an_empty_password(self):
         with self.assertRaisesRegex(Unreadable, "^unreadable: the PDF is encrypted"):

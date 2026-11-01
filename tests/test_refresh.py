@@ -230,6 +230,11 @@ class PdfPages(unittest.TestCase):
         data = pdf("Support answers within two business days.")
         r = self.refresh(data[:len(data) // 2])
         self.assertEqual(r["outcome"], "unreadable")
+        self.assertIn("cut off", r["reason"])
+
+    def test_a_malformed_pdf_is_unreadable(self):
+        r = self.refresh(b"%PDF-1.4\nthis is not a PDF body\n%%EOF\n")
+        self.assertEqual(r["outcome"], "unreadable")
         self.assertIn("cannot be read", r["reason"])
 
     def test_max_bytes_counts_the_downloaded_bytes(self):
