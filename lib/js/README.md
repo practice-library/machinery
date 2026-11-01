@@ -25,7 +25,7 @@ Step 3 covers what `JSON.stringify` leaves raw:
 
 A value that is not a string, or a `max` that is not a safe integer of 0 or more (`Number.isSafeInteger`), throws.
 
-The escaped set follows the Unicode version of the JavaScript runtime, so a newer runtime may escape format characters that an older one leaves raw (U+0890, U+0891 and U+13439..U+1343F became format characters after Unicode 13). The table's cases hold from Unicode 15 on; CI runs a pinned Node 24.
+The escaped set follows the Unicode version of the JavaScript runtime, so a newer runtime may escape format characters that an older one leaves raw (U+0890, U+0891 and U+13439..U+1343F became format characters after Unicode 13). Every case of the table was checked against Unicode 13.0 and 16.0 data. CI runs a pinned Node 24, and the full sweep's floor of 200 escaped code points needs Unicode 15 or later.
 
 The requirement is data, in `conformance/quote-one-line.json`: each case gives the input code points and the exact output. This module is its first implementation. A Python or Go twin, when one is written, is checked against the same table. The JavaScript tests also compare every code point from U+0000 to U+10FFFF with the runtime's own Unicode categories (`tests/js/`).
 

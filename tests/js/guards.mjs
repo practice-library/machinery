@@ -36,14 +36,15 @@ const test = (cwd) => spawnSync(process.execPath, ["--test", "tests/js/quote-one
 
 // The unmutated copy must pass first: a copy that cannot run would make every row below look tested.
 const base = copy();
+let baseline;
 try {
-  const run = test(base);
-  if (run.status !== 0) {
-    console.log(`FAIL the unmutated copy does not pass its tests:\n${run.stdout}${run.stderr}`);
-    process.exit(1);
-  }
+  baseline = test(base);
 } finally {
   rmSync(base, { recursive: true, force: true });
+}
+if (baseline.status !== 0) {
+  console.log(`FAIL the unmutated copy does not pass its tests:\n${baseline.stdout}${baseline.stderr}`);
+  process.exit(1);
 }
 
 let failed = 0;
