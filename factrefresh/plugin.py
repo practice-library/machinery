@@ -381,6 +381,7 @@ def fit(code: int, envelope: dict, cap: Optional[int]) -> Tuple[int, bytes]:
     if cap is None or len(out) <= cap:
         return code, out
     if envelope["ok"]:
+        # conformance/v0_bridge.py reads "larger than outputBytes" as resource_exhausted: keep the words
         code, envelope = FAILED, failure(f"the answer is larger than outputBytes ({cap})")
     message = envelope["warnings"][0]
     lo, hi = 1, len(message)  # the longest prefix that fits, by bisection

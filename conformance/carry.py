@@ -82,7 +82,8 @@ CHANGED = {
 }
 
 
-# Cases v1alpha1 adds, by v0 file: rules the move to proto's JSON mapping makes worth a case of their own.
+# Cases v1alpha1 adds, by the fixture file they go in (the two RunUnit network cases sit with describe.json's
+# request-frame cases): rules the move to proto's JSON mapping makes worth a case of their own.
 # Proto cannot tell an empty hosts or exchanges from a missing one, so these forms must work as their
 # full forms do (contract/v1alpha1/request.schema.json).
 def _unit_input():
@@ -169,8 +170,9 @@ def carry_group(group, source):
             raise SystemExit(f"{source}: {case['name']!r} sends raw stdin; say in CHANGED what it becomes")
         else:
             c["request"] = frame(case.get("request", {}))
-        if "about" in case:
-            c["about"] = case["about"]
+        for key in ("about", "why"):
+            if key in case:
+                c[key] = case[key]
         expect = expect_of(case.get("expect", {}))
         if "expect" in change:
             if change.get("keepData"):

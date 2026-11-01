@@ -138,7 +138,7 @@ def check_success(validator, call, request, status, ctype, data, expect):
     why = validator.check(ref, envelope["data"])
     if why:
         return f"data: {why}"
-    why = invariants(verb, dict(request, contract=PACKAGE), envelope["data"])
+    why = invariants(verb, dict(request or {}, contract=PACKAGE), envelope["data"])  # rawBody: no request
     if why:
         return why
     return matches(envelope, expect.get("envelope", {}), "response")
@@ -156,6 +156,7 @@ def check_error(validator, status, ctype, data, expect):
         return f"code {code} with HTTP {status}, expected HTTP {HTTP_STATUS[code]}"
     if code != expect["code"]:
         return f"code {code} (HTTP {status}), expected {expect['code']}"
+    # details may be left out; null is not read as left out (Connect writes a list or nothing)
     if connect and not isinstance(body.get("details", []), list):
         return "the error's details is not a list"
     details = [d for d in body.get("details", []) if isinstance(d, dict) and d.get("type") == failure.TYPE] if connect else []

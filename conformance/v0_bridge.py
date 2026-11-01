@@ -132,7 +132,10 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(404, b"404 page not found\n", "text/plain; charset=utf-8")
         if self.headers.get("Content-Type", "").split(";")[0].strip().lower() != "application/json":
             return self.send(415, b"unsupported media type\n", "text/plain; charset=utf-8")
-        length = int(self.headers.get("Content-Length") or 0)
+        raw = self.headers.get("Content-Length") or "0"
+        if not (raw.isascii() and raw.isdigit() and len(raw) <= 10):
+            return self.error("invalid_argument", "Content-Length is not a number of bytes")
+        length = int(raw)
         if length > MAX_BODY:
             return self.error("resource_exhausted", "the request is too large")
         try:
@@ -167,6 +170,7 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(200, integers(envelope))
         code = EXIT.get(done.returncode, "internal")
         warnings = envelope.get("warnings", []) if isinstance(envelope, dict) else []
+        # the warning factrefresh/plugin.py writes for an answer over outputBytes; a fixture fails if it drifts
         if code == "failed_precondition" and any("larger than outputBytes" in w for w in warnings):
             code = "resource_exhausted"
         return self.error(code, f"the plugin exited {done.returncode}", envelope if isinstance(envelope, dict) else None, cap)
