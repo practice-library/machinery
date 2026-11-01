@@ -1,0 +1,123 @@
+{
+  "groups": [
+    {
+      "schema": "https://github.com/practice-library/machinery/contract/v1alpha1/envelope.schema.json",
+      "valid": [
+        {
+          "name": "a response",
+          "instance": {
+            "ok": true,
+            "data": {
+              "x": 1
+            },
+            "notRead": [],
+            "warnings": []
+          }
+        },
+        {
+          "name": "a decoded Failure",
+          "instance": {
+            "ok": false,
+            "data": null,
+            "notRead": [],
+            "warnings": [
+              "two partial results for one unit"
+            ]
+          }
+        }
+      ],
+      "invalid": [
+        {
+          "name": "a Failure with data",
+          "instance": {
+            "ok": false,
+            "data": {},
+            "notRead": [],
+            "warnings": [
+              "x"
+            ]
+          }
+        },
+        {
+          "name": "a Failure without a warning",
+          "instance": {
+            "ok": false,
+            "data": null,
+            "notRead": [],
+            "warnings": []
+          }
+        },
+        {
+          "name": "notRead left out, as a default JSON codec would",
+          "instance": {
+            "ok": true,
+            "data": {},
+            "warnings": []
+          }
+        },
+        {
+          "name": "data left out",
+          "instance": {
+            "ok": true,
+            "notRead": [],
+            "warnings": []
+          }
+        }
+      ]
+    },
+    {
+      "schema": "https://github.com/practice-library/machinery/contract/v1alpha1/envelope.schema.json#/$defs/response",
+      "valid": [
+        {
+          "name": "ok true",
+          "instance": {
+            "ok": true,
+            "data": {},
+            "notRead": [],
+            "warnings": []
+          }
+        }
+      ],
+      "invalid": [
+        {
+          "name": "a success that says ok false",
+          "instance": {
+            "ok": false,
+            "data": null,
+            "notRead": [],
+            "warnings": [
+              "x"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "schema": "https://github.com/practice-library/machinery/contract/v1alpha1/envelope.schema.json#/$defs/failure",
+      "valid": [
+        {
+          "name": "ok false, data null, a warning",
+          "instance": {
+            "ok": false,
+            "data": null,
+            "notRead": [],
+            "warnings": [
+              "x"
+            ]
+          }
+        }
+      ],
+      "invalid": [
+        {
+          "name": "a Failure that says ok true",
+          "instance": {
+            "ok": true,
+            "data": {},
+            "notRead": [],
+            "warnings": []
+          }
+        }
+      ]
+    }
+  ]
+}

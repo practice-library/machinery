@@ -87,8 +87,8 @@ def matches(actual, expected, path="data"):
 
 
 class Validator:
-    def __init__(self, cli, report_schema):
-        self.cli, self.report = cli, report_schema
+    def __init__(self, cli, report_schema, contract=CONTRACT):
+        self.cli, self.report, self.contract = cli, report_schema, contract
         self.tmp = tempfile.mkdtemp()
         self.rc = None  # the last run's exit code: 0 valid, 2 a finding, anything else an error
 
@@ -102,7 +102,7 @@ class Validator:
             json.dump({"$schema": "https://json-schema.org/draft/2020-12/schema", "$ref": schema_ref}, f)
         with open(data, "w") as f:
             json.dump(instance, f)
-        cmd = [self.cli, "validate", schema, data, "--resolve", CONTRACT, "--resolve", self.report]
+        cmd = [self.cli, "validate", schema, data, "--resolve", self.contract, "--resolve", self.report]
         out = subprocess.run(cmd, capture_output=True, text=True)
         self.rc = out.returncode
         return None if out.returncode == 0 else (out.stdout + out.stderr).strip()[-600:]

@@ -97,6 +97,12 @@ jobs:
         run: python3 contract/check_examples.py --validator jsonschema --report-schema "$REPORT_SCHEMA"
       - name: The Python plugin passes the conformance suite
         run: python3 conformance/run.py --plugin "$PWD/bin/fact-refresh-plugin" --report-schema "$REPORT_SCHEMA" --validator jsonschema
+      - name: The v1alpha1 schemas are valid 2020-12, every example validates, every counter-example is rejected
+        run: |
+          set -euo pipefail
+          jsonschema metaschema contract/v1alpha1/*.json
+          python3 contract/check_examples.py --validator jsonschema --report-schema "$REPORT_SCHEMA" \
+            --contract contract/v1alpha1 --examples contract/examples/v1alpha1
 
   proto:
     name: proto

@@ -1,0 +1,104 @@
+{
+  "groups": [
+    {
+      "schema": "https://github.com/practice-library/machinery/contract/v1alpha1/fact-refresh.schema.json#/$defs/unit",
+      "valid": [
+        {
+          "name": "a unit on a pdf host",
+          "instance": {
+            "id": "host:docs.example.com",
+            "shardKey": "docs.example.com",
+            "pacing": {
+              "minIntervalSeconds": 2.0
+            },
+            "budget": {
+              "requests": 3
+            },
+            "host": {
+              "host": "docs.example.com",
+              "format": "pdf",
+              "maxBytes": 4000000,
+              "timeoutSeconds": 30
+            },
+            "userAgent": "example-agent/1",
+            "retryAfterMaxSeconds": 60,
+            "facts": [
+              {
+                "node": "rule.example.a",
+                "source": "https://docs.example.com/a",
+                "measuredAt": "2026-09-01",
+                "quote": {
+                  "text": "Each key may send 20 requests per second."
+                }
+              }
+            ]
+          }
+        },
+        {
+          "name": "a unit on an html host, as in v0",
+          "instance": {
+            "id": "host:docs.example.com",
+            "shardKey": "docs.example.com",
+            "pacing": {
+              "minIntervalSeconds": 2.0
+            },
+            "budget": {
+              "requests": 3
+            },
+            "host": {
+              "host": "docs.example.com",
+              "format": "html",
+              "maxBytes": 2000000,
+              "timeoutSeconds": 30
+            },
+            "userAgent": "example-agent/1",
+            "retryAfterMaxSeconds": 60,
+            "facts": [
+              {
+                "node": "rule.example.a",
+                "source": "https://docs.example.com/a",
+                "measuredAt": "2026-09-01",
+                "quote": {
+                  "text": "Each key may send 20 requests per second."
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "invalid": [
+        {
+          "name": "format PDF in upper case",
+          "instance": {
+            "id": "host:docs.example.com",
+            "shardKey": "docs.example.com",
+            "pacing": {
+              "minIntervalSeconds": 2.0
+            },
+            "budget": {
+              "requests": 3
+            },
+            "host": {
+              "host": "docs.example.com",
+              "format": "PDF",
+              "maxBytes": 2000000,
+              "timeoutSeconds": 30
+            },
+            "userAgent": "example-agent/1",
+            "retryAfterMaxSeconds": 60,
+            "facts": [
+              {
+                "node": "rule.example.a",
+                "source": "https://docs.example.com/a",
+                "measuredAt": "2026-09-01",
+                "quote": {
+                  "text": "Each key may send 20 requests per second."
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

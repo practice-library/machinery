@@ -1,0 +1,149 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/practice-library/machinery/contract/v1alpha1/fact-refresh.schema.json",
+  "title": "fact-refresh job, contract v1alpha1",
+  "description": "The inputs and outputs of the fact-refresh verbs. plan turns one graph into work units, one per source host; run-unit reads one unit's sources and returns a partial result; merge turns the plan and every partial result into one refresh report. The report, the result and the robots record are those of the referenced report schema (contract/pins.json), not redefined here.",
+  "$defs": {
+    "planInput": {
+      "type": "object",
+      "required": ["graph", "commit", "run", "now", "policy", "nodes"],
+      "additionalProperties": false,
+      "properties": {
+        "graph": {"$ref": "#/$defs/graph"},
+        "commit": {"$ref": "#/$defs/commit"},
+        "run": {"$ref": "#/$defs/run"},
+        "now": {"$ref": "#/$defs/time", "description": "The run's start; due facts are decided against its date."},
+        "policy": {"type": "object", "description": "The graphs repository's policy/sources.json, as it is in the commit."},
+        "nodes": {"type": "array", "items": {"type": "object"}, "description": "Every node of the graph, as it is in the commit."}
+      }
+    },
+    "plan": {
+      "type": "object",
+      "required": ["graph", "commit", "run", "startedAt", "maxParallel", "units", "decided"],
+      "additionalProperties": false,
+      "properties": {
+        "graph": {"$ref": "#/$defs/graph"},
+        "commit": {"$ref": "#/$defs/commit"},
+        "run": {"$ref": "#/$defs/run"},
+        "startedAt": {"$ref": "#/$defs/time"},
+        "maxParallel": {"type": "integer", "minimum": 1, "maximum": 3, "description": "How many run-unit calls may run at once: never more than 3, so the account's other repositories keep runners."},
+        "units": {"type": "array", "items": {"$ref": "#/$defs/unit"}},
+        "decided": {
+          "type": "array",
+          "description": "Results the plan decided without fetching (a source on a host not listed for the vendor), which merge puts in the report as they are.",
+          "items": {"$ref": "https://github.com/practice-library/.github/spec/refresh-report/schema.json#/$defs/result"}
+        }
+      }
+    },
+    "unit": {
+      "type": "object",
+      "description": "One independent piece of work: every due fact of one host. The shardKey is the host; a plan has one unit per host, so units never share one and a gateway may run any of them at once, up to maxParallel.",
+      "required": ["id", "shardKey", "pacing", "budget", "host", "userAgent", "retryAfterMaxSeconds", "facts"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {"type": "string", "pattern": "^host:[a-z0-9.-]+$"},
+        "shardKey": {"$ref": "request.schema.json#/$defs/host"},
+        "pacing": {
+          "type": "object",
+          "required": ["minIntervalSeconds"],
+          "additionalProperties": false,
+          "properties": {"minIntervalSeconds": {"type": "number", "minimum": 0, "maximum": 60}}
+        },
+        "budget": {
+          "type": "object",
+          "required": ["requests"],
+          "additionalProperties": false,
+          "properties": {"requests": {"type": "integer", "minimum": 2, "maximum": 200, "description": "Requests this unit may make, robots.txt included; the budgets of a plan add up to at most the run-wide maxRequestsPerRun."}}
+        },
+        "host": {
+          "type": "object",
+          "required": ["host", "format", "maxBytes", "timeoutSeconds"],
+          "additionalProperties": false,
+          "properties": {
+            "host": {"$ref": "request.schema.json#/$defs/host"},
+            "format": {"enum": ["markdown", "text", "html", "json", "pdf"]},
+            "maxBytes": {"type": "integer", "minimum": 1024, "maximum": 5000000},
+            "timeoutSeconds": {"type": "integer", "minimum": 1, "maximum": 60}
+          }
+        },
+        "userAgent": {"type": "string", "minLength": 1},
+        "retryAfterMaxSeconds": {"type": "integer", "minimum": 0, "maximum": 120},
+        "facts": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["node", "source", "measuredAt", "quote"],
+            "additionalProperties": false,
+            "properties": {
+              "node": {"type": "string", "pattern": "^[a-z][a-z0-9-]*(\\.[a-z0-9][a-z0-9-]*)+$"},
+              "source": {"$ref": "https://github.com/practice-library/.github/spec/refresh-report/schema.json#/$defs/url"},
+              "measuredAt": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"},
+              "quote": {"$ref": "#/$defs/quote"}
+            }
+          }
+        }
+      }
+    },
+    "quote": {
+      "description": "What must be on the page. text: a sentence, found as a whole in the page's text. cells: a table row, found as consecutive cells of one row of a table on the page; plan turns a stored quote written as a markdown table row ('| a | b |') into cells, because that form never appears in a page's text.",
+      "oneOf": [
+        {"type": "object", "required": ["text"], "additionalProperties": false, "properties": {"text": {"type": "string", "minLength": 1, "maxLength": 500}}},
+        {"type": "object", "required": ["cells"], "additionalProperties": false, "properties": {"cells": {"type": "array", "minItems": 1, "maxItems": 250, "items": {"type": "string", "maxLength": 500}, "description": "A stored quote is at most 500 characters, so a row has at most 250 cells"}}}
+      ]
+    },
+    "partial": {
+      "type": "object",
+      "required": ["unit", "shardKey", "requests", "robots", "results", "notReached"],
+      "additionalProperties": false,
+      "properties": {
+        "unit": {"type": "string", "pattern": "^host:[a-z0-9.-]+$"},
+        "shardKey": {"$ref": "request.schema.json#/$defs/host"},
+        "requests": {"type": "integer", "minimum": 0, "maximum": 200},
+        "robots": {
+          "description": "robots.txt of the unit's host, read before any page; null when the budget ran out before it could be read.",
+          "oneOf": [{"type": "null"}, {"$ref": "https://github.com/practice-library/.github/spec/refresh-report/schema.json#/$defs/robots"}]
+        },
+        "aborted": {
+          "type": "object", "required": ["reason"], "additionalProperties": false,
+          "properties": {"reason": {"type": "string", "minLength": 1, "maxLength": 300}}
+        },
+        "results": {"type": "array", "items": {"$ref": "https://github.com/practice-library/.github/spec/refresh-report/schema.json#/$defs/result"}},
+        "notReached": {
+          "type": "array", "uniqueItems": true,
+          "description": "Facts of the unit with no result because the budget or the time cap ran out first; they wait for the next run and are left out of the report. Unless the unit aborted, results and notReached together name every fact of the unit exactly once.",
+          "items": {"type": "string", "pattern": "^[a-z][a-z0-9-]*(\\.[a-z0-9][a-z0-9-]*)+$"}
+        }
+      },
+      "if": {"required": ["aborted"]},
+      "then": {"properties": {"results": {"maxItems": 0}}}
+    },
+    "runInput": {
+      "$ref": "#/$defs/planInput",
+      "description": "The run verb, for a plugin that answers this job in one call instead of plan, run-unit and merge: the same input as plan."
+    },
+    "runData": {
+      "$ref": "https://github.com/practice-library/.github/spec/refresh-report/schema.json",
+      "description": "The run verb's answer: the refresh report, as merge would return it."
+    },
+    "mergeInput": {
+      "type": "object",
+      "required": ["plan", "partials"],
+      "additionalProperties": false,
+      "properties": {
+        "plan": {"$ref": "#/$defs/plan"},
+        "partials": {"type": "array", "items": {"$ref": "#/$defs/partial"}}
+      }
+    },
+    "graph": {"type": "string", "pattern": "^[a-z][a-z0-9-]*/[a-z0-9][a-z0-9-]*$"},
+    "commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "run": {
+      "type": "object", "required": ["id", "url"], "additionalProperties": false,
+      "properties": {
+        "id": {"type": "integer", "minimum": 1},
+        "url": {"$ref": "https://github.com/practice-library/.github/spec/refresh-report/schema.json#/$defs/url"}
+      }
+    },
+    "time": {"$ref": "https://github.com/practice-library/.github/spec/refresh-report/schema.json#/$defs/time"}
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/practice-library/machinery/contract/v1alpha1/envelope.schema.json",
+  "title": "Reply envelope, contract v1alpha1",
+  "description": "The JSON form of every response message of machinery.plugin.v1alpha1.PluginService, with ok true, and of the Failure detail of a failed call, decoded, with ok false, data null and warnings saying why: exactly this object, every field written. The Connect code goes with a failure (plugin.proto).",
+  "type": "object",
+  "required": ["ok", "data", "notRead", "warnings"],
+  "additionalProperties": false,
+  "properties": {
+    "ok": {"type": "boolean"},
+    "data": {"description": "The verb's result; its schema depends on the verb (describe.schema.json, fact-refresh.schema.json, or the referenced report schema for Merge)."},
+    "notRead": {
+      "type": "array",
+      "description": "Inputs the plugin was given and deliberately did not use, each with the reason.",
+      "items": {
+        "type": "object",
+        "required": ["what", "why"],
+        "additionalProperties": false,
+        "properties": {
+          "what": {"type": "string", "minLength": 1, "maxLength": 300},
+          "why": {"type": "string", "minLength": 1, "maxLength": 300}
+        }
+      }
+    },
+    "warnings": {"type": "array", "items": {"type": "string", "minLength": 1, "maxLength": 500}}
+  },
+  "if": {"properties": {"ok": {"const": false}}, "required": ["ok"]},
+  "then": {"properties": {"data": {"const": null}, "warnings": {"minItems": 1}}},
+  "$defs": {
+    "response": {"description": "A call's response: ok true.", "$ref": "#", "properties": {"ok": {"const": true}}},
+    "failure": {"description": "A decoded Failure detail: ok false, data null, at least one warning.", "$ref": "#", "properties": {"ok": {"const": false}}}
+  }
+}
