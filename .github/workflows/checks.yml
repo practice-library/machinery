@@ -1,6 +1,6 @@
 name: checks
 # Every check a pull request must pass; the ruleset requires "gate / gate". Reusable workflows come from
-# practice-library/.github, pinned to the full commit of release v2.1.0. The gate's needs must equal the
+# practice-library/.github, pinned to the full commit of release v2.4.0. The gate's needs must equal the
 # jobs in .github/required-checks.json.
 on:
   pull_request:
@@ -35,13 +35,13 @@ jobs:
         run: python3 tests/guards.py
 
   contract-schemas:
-    uses: practice-library/.github/.github/workflows/schema-check.yml@1dd90884cca4277db278eb7d4ea17eaebf21e563 # v2.1.0
+    uses: practice-library/.github/.github/workflows/schema-check.yml@75a03317883e16f7ad93f1239dc53c9d0e1c4cc1 # v2.4.0
     with:
       mode: metaschema
       schema: contract/v0
 
   recorded-report:
-    uses: practice-library/.github/.github/workflows/schema-check.yml@1dd90884cca4277db278eb7d4ea17eaebf21e563 # v2.1.0
+    uses: practice-library/.github/.github/workflows/schema-check.yml@75a03317883e16f7ad93f1239dc53c9d0e1c4cc1 # v2.4.0
     with:
       schema: tests/fixtures/graphs/spec/refresh-report/schema.json
       instances: tests/fixtures/expect/vendors-example.json
@@ -99,13 +99,13 @@ jobs:
         run: python3 conformance/run.py --plugin "$PWD/bin/fact-refresh-plugin" --report-schema "$REPORT_SCHEMA" --validator jsonschema
 
   leak-scan:
-    uses: practice-library/.github/.github/workflows/leak-scan.yml@1dd90884cca4277db278eb7d4ea17eaebf21e563 # v2.1.0
+    uses: practice-library/.github/.github/workflows/leak-scan.yml@75a03317883e16f7ad93f1239dc53c9d0e1c4cc1 # v2.4.0
 
   denylist:
     permissions:
       contents: read
       pull-requests: read
-    uses: practice-library/.github/.github/workflows/guard.yml@1dd90884cca4277db278eb7d4ea17eaebf21e563 # v2.1.0
+    uses: practice-library/.github/.github/workflows/guard.yml@75a03317883e16f7ad93f1239dc53c9d0e1c4cc1 # v2.4.0
     with:
       guard: denylist
 
@@ -113,7 +113,7 @@ jobs:
     permissions:
       contents: read
       pull-requests: read
-    uses: practice-library/.github/.github/workflows/guard.yml@1dd90884cca4277db278eb7d4ea17eaebf21e563 # v2.1.0
+    uses: practice-library/.github/.github/workflows/guard.yml@75a03317883e16f7ad93f1239dc53c9d0e1c4cc1 # v2.4.0
     with:
       guard: removed-paths
 
@@ -121,7 +121,7 @@ jobs:
     permissions:
       contents: read
       pull-requests: read
-    uses: practice-library/.github/.github/workflows/guard.yml@1dd90884cca4277db278eb7d4ea17eaebf21e563 # v2.1.0
+    uses: practice-library/.github/.github/workflows/guard.yml@75a03317883e16f7ad93f1239dc53c9d0e1c4cc1 # v2.4.0
     with:
       guard: release-note
 
@@ -129,13 +129,13 @@ jobs:
     permissions:
       contents: read
       pull-requests: read
-    uses: practice-library/.github/.github/workflows/guard.yml@1dd90884cca4277db278eb7d4ea17eaebf21e563 # v2.1.0
+    uses: practice-library/.github/.github/workflows/guard.yml@75a03317883e16f7ad93f1239dc53c9d0e1c4cc1 # v2.4.0
     with:
       guard: schema-loosening
 
   gate:
     if: always()
     needs: [unit, contract-schemas, recorded-report, conformance, leak-scan, denylist, removed-paths, release-note, schema-loosening]
-    uses: practice-library/.github/.github/workflows/gate.yml@1dd90884cca4277db278eb7d4ea17eaebf21e563 # v2.1.0
+    uses: practice-library/.github/.github/workflows/gate.yml@75a03317883e16f7ad93f1239dc53c9d0e1c4cc1 # v2.4.0
     with:
       needs: ${{ toJSON(needs) }}
