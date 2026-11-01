@@ -7,6 +7,7 @@ in a page's text; it is matched as a sequence of cells against the rows of the p
 """
 from __future__ import annotations
 
+import io
 import re
 from html.parser import HTMLParser
 from typing import Dict, List, Optional, Union
@@ -75,6 +76,44 @@ class _Text(HTMLParser):
 
 def normalise(text: str) -> str:
     return _WS.sub(" ", text).strip()
+
+
+class Unreadable(Exception):
+    """A page that cannot be read; the message is the result's reason."""
+
+
+PDF_MIME = "application/pdf"
+
+
+def pdf_text(data: bytes) -> str:
+    """The text of a PDF, its pages in order, with whitespace collapsed as for every other format. A PDF that
+    cannot be read (truncated, malformed, encrypted, or with no text layer) raises Unreadable, never a verdict.
+
+    Extraction can split a word (a name printed as two runs may come out as "CERT -In"). Matching stays exact,
+    so a stored quote for a PDF page is copied from the extracted text."""
+    try:
+        import pypdf  # requirements.txt, pinned by hash; only a host with format pdf needs it
+    except ImportError:
+        raise Unreadable("unreadable: no PDF reader is installed (requirements.txt)")
+    if not data.startswith(b"%PDF-"):
+        raise Unreadable("unreadable: not a PDF (the body does not start with %PDF-)")
+    if not data.rstrip(b"\x00\t\n\f\r ").endswith(b"%%EOF"):
+        # A PDF saved more than once (an incremental update, or a linearized file) has an earlier %%EOF, and
+        # the reader below falls back to it: a file cut inside a later revision would read as the older one.
+        raise Unreadable("unreadable: the PDF is cut off (it does not end with %%EOF)")
+    try:
+        # Not strict: published PDFs often break the specification in small ways a reader recovers from.
+        reader = pypdf.PdfReader(io.BytesIO(data), strict=False)
+        if reader.is_encrypted:
+            raise Unreadable("unreadable: the PDF is encrypted")
+        text = normalise(" ".join(page.extract_text() or "" for page in reader.pages))
+    except Unreadable:
+        raise
+    except Exception as err:  # the body is untrusted input: any failure while reading it leaves the page unread
+        raise Unreadable(f"unreadable: the PDF cannot be read ({type(err).__name__})")
+    if not text:
+        raise Unreadable("unreadable: the PDF has no text layer (a scan?), so no quote can be confirmed")
+    return text
 
 
 def page_text(body: str, fmt: str) -> str:
