@@ -1,1 +1,1 @@
-{"jobs": ["unit", "contract-schemas", "recorded-report", "conformance", "leak-scan", "denylist", "removed-paths", "release-note", "schema-loosening"]}
+{"jobs": ["unit", "contract-schemas", "recorded-report", "conformance", "proto", "leak-scan", "denylist", "removed-paths", "release-note", "schema-loosening"]}

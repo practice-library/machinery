@@ -1,0 +1,12 @@
+# The plugin contract's .proto module (plan #17). No dependencies beyond the well-known types, so nothing is
+# fetched from a registry. CI runs buf format, buf lint and buf build; buf breaking starts at the first tag
+# that carries the module.
+version: v2
+modules:
+  - path: proto
+lint:
+  use:
+    - STANDARD
+breaking:
+  use:
+    - FILE

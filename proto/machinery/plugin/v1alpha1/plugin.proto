@@ -1,0 +1,151 @@
+// The plugin contract as a service: the calls, their request frames and their outcomes. Plan #17.
+//
+// A job's documents stay JSON Schema. Its input travels as a google.protobuf.Struct and its result as a
+// google.protobuf.Value, each validated against the schema whose $id describe names, so one service serves
+// every job and no job schema is written twice. Bounds and rules that proto cannot state (the caps ranges,
+// the host pattern, status or error in a recorded response) are checked by the runtime, which answers
+// INVALID_ARGUMENT.
+//
+// Outcomes: a call that succeeds returns its response with ok true. A call that fails returns a Connect
+// error, never ok false in a success: FAILED_PRECONDITION (a valid request that fails, exit 1 of contract
+// v0), RESOURCE_EXHAUSTED (an answer over output_bytes, exit 1), INVALID_ARGUMENT (not a valid request,
+// exit 2), UNIMPLEMENTED (a package or call the plugin does not serve, exit 3), UNAVAILABLE (try again
+// later, exit 75; the only code a caller retries) and DEADLINE_EXCEEDED (over time_seconds). The error
+// carries a Failure detail.
+//
+// Unstable until v1, like contract v0. From v1 on, buf breaking enforces additive-only change.
+syntax = "proto3";
+
+package machinery.plugin.v1alpha1;
+
+import "google/protobuf/struct.proto";
+
+// One service for every job.
+service PluginService {
+  // What the plugin is: its name, version, the contracts it speaks, its job and its calls (describe.schema.json).
+  rpc Describe(DescribeRequest) returns (DescribeResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  // A shardable job's input to independent work units.
+  rpc Plan(PlanRequest) returns (PlanResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  // One work unit to a partial result. UNAVAILABLE asks the caller to retry the unit later.
+  rpc RunUnit(RunUnitRequest) returns (RunUnitResponse);
+  // The plan and every partial result to one result.
+  rpc Merge(MergeRequest) returns (MergeResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  // A job that is not shardable, in one call.
+  rpc Run(RunRequest) returns (RunResponse);
+}
+
+// Set by the caller. The plugin finishes within time_seconds and answers at most output_bytes; the caller
+// sends time_seconds as the call's deadline as well, and refuses a larger response body.
+message Caps {
+  uint32 time_seconds = 1; // 1 to 3600
+  uint32 output_bytes = 2; // 1024 to 16777216: the response body
+}
+
+// The only hosts the plugin may connect to, or recorded responses instead of a network. Absent: no network.
+message Network {
+  repeated string hosts = 1;
+  // With replay, hosts is empty and the plugin opens no connection.
+  Replay replay = 2;
+}
+
+// Recorded responses that stand in for the network, with a virtual clock, for conformance runs.
+message Replay {
+  // The virtual clock's start, as 2026-10-31T12:00:00Z; waits advance it instead of passing.
+  string start = 1;
+  // A URL to its responses, answered in order; a URL with no response left gets a network error.
+  map<string, Exchanges> exchanges = 2;
+}
+
+// One URL's recorded responses, in order.
+message Exchanges {
+  repeated Recorded responses = 1;
+}
+
+// A response (status, with headers and body) or a network error, never both.
+message Recorded {
+  optional uint32 status = 1; // 100 to 599
+  map<string, string> headers = 2;
+  optional string body = 3; // UTF-8 text
+  optional string error = 4;
+}
+
+// An input the plugin was given and deliberately did not use.
+message NotRead {
+  string what = 1;
+  string why = 2;
+}
+
+// What a failed call carries as its Connect error detail.
+message Failure {
+  repeated NotRead not_read = 1;
+  repeated string warnings = 2; // at least one: why the call failed
+}
+
+message DescribeRequest {
+  Caps caps = 1;
+}
+
+// Each response carries the fields of the shared reply format; its JSON form validates against
+// envelope.schema.json, with every field written (not_read and warnings as [] when empty).
+message DescribeResponse {
+  bool ok = 1;
+  google.protobuf.Value data = 2;
+  repeated NotRead not_read = 3;
+  repeated string warnings = 4;
+}
+
+message PlanRequest {
+  Caps caps = 1;
+  google.protobuf.Struct input = 2;
+}
+
+message PlanResponse {
+  bool ok = 1;
+  google.protobuf.Value data = 2;
+  repeated NotRead not_read = 3;
+  repeated string warnings = 4;
+}
+
+message RunUnitRequest {
+  Caps caps = 1;
+  Network network = 2;
+  google.protobuf.Struct input = 3;
+}
+
+message RunUnitResponse {
+  bool ok = 1;
+  google.protobuf.Value data = 2;
+  repeated NotRead not_read = 3;
+  repeated string warnings = 4;
+}
+
+message MergeRequest {
+  Caps caps = 1;
+  google.protobuf.Struct input = 2;
+}
+
+message MergeResponse {
+  bool ok = 1;
+  google.protobuf.Value data = 2;
+  repeated NotRead not_read = 3;
+  repeated string warnings = 4;
+}
+
+message RunRequest {
+  Caps caps = 1;
+  Network network = 2;
+  google.protobuf.Struct input = 3;
+}
+
+message RunResponse {
+  bool ok = 1;
+  google.protobuf.Value data = 2;
+  repeated NotRead not_read = 3;
+  repeated string warnings = 4;
+}
