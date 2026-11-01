@@ -2,18 +2,20 @@
 //
 // A job's documents stay JSON Schema. Its input travels as a google.protobuf.Struct and its result as a
 // google.protobuf.Value, each validated against the schema whose $id describe names, so one service serves
-// every job and no job schema is written twice. Bounds and rules that proto cannot state (the caps ranges,
-// the host pattern, status or error in a recorded response) are checked by the runtime, which answers
-// INVALID_ARGUMENT.
+// every job and no job schema is written twice. Bounds and rules that proto cannot state are checked by the
+// runtime, which answers INVALID_ARGUMENT: the caps ranges, the host pattern, hosts and replay not both set,
+// the replay start as 2026-10-31T12:00:00Z, status (100 to 599) or a non-empty error in a recorded response,
+// and no input for Describe.
 //
 // Outcomes: a call that succeeds returns its response with ok true. A call that fails returns a Connect
 // error, never ok false in a success: FAILED_PRECONDITION (a valid request that fails, exit 1 of contract
 // v0), RESOURCE_EXHAUSTED (an answer over output_bytes, exit 1), INVALID_ARGUMENT (not a valid request,
 // exit 2), UNIMPLEMENTED (a package or call the plugin does not serve, exit 3), UNAVAILABLE (try again
 // later, exit 75; the only code a caller retries) and DEADLINE_EXCEEDED (over time_seconds). The error
-// carries a Failure detail.
+// carries a Failure detail: the envelope with ok false and data null.
 //
-// Unstable until v1, like contract v0. From v1 on, buf breaking enforces additive-only change.
+// Unstable until v1, like contract v0: v1alpha1 may still change. From v1 on, buf breaking enforces
+// additive-only change.
 syntax = "proto3";
 
 package machinery.plugin.v1alpha1;
@@ -22,7 +24,8 @@ import "google/protobuf/struct.proto";
 
 // One service for every job.
 service PluginService {
-  // What the plugin is: its name, version, the contracts it speaks, its job and its calls (describe.schema.json).
+  // What the plugin is: its name, version, the contracts it speaks, its job and its calls (the describe schema
+  // of contract/v1alpha1, plan #17 PR 2).
   rpc Describe(DescribeRequest) returns (DescribeResponse) {
     option idempotency_level = NO_SIDE_EFFECTS;
   }
@@ -81,10 +84,13 @@ message NotRead {
   string why = 2;
 }
 
-// What a failed call carries as its Connect error detail.
+// What a failed call carries as its Connect error detail: the envelope with ok false, data null, and at
+// least one warning saying why. Its JSON form validates against envelope.schema.json, as a response does.
 message Failure {
-  repeated NotRead not_read = 1;
-  repeated string warnings = 2; // at least one: why the call failed
+  bool ok = 1;
+  google.protobuf.Value data = 2;
+  repeated NotRead not_read = 3;
+  repeated string warnings = 4;
 }
 
 message DescribeRequest {
