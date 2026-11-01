@@ -1,0 +1,450 @@
+{
+  "about": "The requirement of quoteOneLine (machinery#32): quote an untrusted string for one-line terminal output. Each case's input is a list of code points (a value in U+D800..U+DFFF is a lone surrogate); output is the exact result.",
+  "rule": [
+    "Keep the first max code points of the value (default 40); a surrogate pair is one code point and is never split, a lone surrogate is one.",
+    "Apply JSON.stringify: quotes, backslash, C0 controls and lone surrogates are escaped as JSON does (\\b \\t \\n \\f \\r, or lower-case \\u00xx and \\udxxx).",
+    "Then write every code point of general category Cc, Cf, Zl or Zp that is still raw as \\uxxxx (lower-case, four digits) or, above U+FFFF, \\u{x} (lower-case, no padding).",
+    "Every other code point is left as it is."
+  ],
+  "defaultMax": 40,
+  "cases": [
+    {
+      "name": "escaped: Cc first, U+0000",
+      "input": [
+        0
+      ],
+      "output": "\"\\u0000\""
+    },
+    {
+      "name": "escaped: Cc, U+001B escape",
+      "input": [
+        27
+      ],
+      "output": "\"\\u001b\""
+    },
+    {
+      "name": "escaped: Cc end of C0, U+001F",
+      "input": [
+        31
+      ],
+      "output": "\"\\u001f\""
+    },
+    {
+      "name": "escaped: Cc DEL, U+007F",
+      "input": [
+        127
+      ],
+      "output": "\"\\u007f\""
+    },
+    {
+      "name": "escaped: Cc first of C1, U+0080",
+      "input": [
+        128
+      ],
+      "output": "\"\\u0080\""
+    },
+    {
+      "name": "escaped: Cc CSI, U+009B",
+      "input": [
+        155
+      ],
+      "output": "\"\\u009b\""
+    },
+    {
+      "name": "escaped: Cc last, U+009F",
+      "input": [
+        159
+      ],
+      "output": "\"\\u009f\""
+    },
+    {
+      "name": "escaped: Cf first, U+00AD soft hyphen",
+      "input": [
+        173
+      ],
+      "output": "\"\\u00ad\""
+    },
+    {
+      "name": "escaped: Cf U+061C arabic letter mark",
+      "input": [
+        1564
+      ],
+      "output": "\"\\u061c\""
+    },
+    {
+      "name": "escaped: Cf U+200B zero width space",
+      "input": [
+        8203
+      ],
+      "output": "\"\\u200b\""
+    },
+    {
+      "name": "escaped: Cf U+200D zero width joiner",
+      "input": [
+        8205
+      ],
+      "output": "\"\\u200d\""
+    },
+    {
+      "name": "escaped: Cf U+200E left-to-right mark",
+      "input": [
+        8206
+      ],
+      "output": "\"\\u200e\""
+    },
+    {
+      "name": "escaped: Cf U+200F right-to-left mark",
+      "input": [
+        8207
+      ],
+      "output": "\"\\u200f\""
+    },
+    {
+      "name": "escaped: Cf U+202A first embedding",
+      "input": [
+        8234
+      ],
+      "output": "\"\\u202a\""
+    },
+    {
+      "name": "escaped: Cf U+202E right-to-left override",
+      "input": [
+        8238
+      ],
+      "output": "\"\\u202e\""
+    },
+    {
+      "name": "escaped: Cf U+2060 word joiner",
+      "input": [
+        8288
+      ],
+      "output": "\"\\u2060\""
+    },
+    {
+      "name": "escaped: Cf U+2064 invisible plus",
+      "input": [
+        8292
+      ],
+      "output": "\"\\u2064\""
+    },
+    {
+      "name": "escaped: Cf U+2066 first isolate",
+      "input": [
+        8294
+      ],
+      "output": "\"\\u2066\""
+    },
+    {
+      "name": "escaped: Cf U+2069 pop directional isolate",
+      "input": [
+        8297
+      ],
+      "output": "\"\\u2069\""
+    },
+    {
+      "name": "escaped: Cf U+206A",
+      "input": [
+        8298
+      ],
+      "output": "\"\\u206a\""
+    },
+    {
+      "name": "escaped: Cf U+206F",
+      "input": [
+        8303
+      ],
+      "output": "\"\\u206f\""
+    },
+    {
+      "name": "escaped: Cf U+FEFF byte order mark",
+      "input": [
+        65279
+      ],
+      "output": "\"\\ufeff\""
+    },
+    {
+      "name": "escaped: Cf U+FFF9 interlinear annotation",
+      "input": [
+        65529
+      ],
+      "output": "\"\\ufff9\""
+    },
+    {
+      "name": "escaped: Cf astral, U+1D173 musical symbol",
+      "input": [
+        119155
+      ],
+      "output": "\"\\u{1d173}\""
+    },
+    {
+      "name": "escaped: Cf astral tag, U+E0001",
+      "input": [
+        917505
+      ],
+      "output": "\"\\u{e0001}\""
+    },
+    {
+      "name": "escaped: Cf astral tag, U+E0020",
+      "input": [
+        917536
+      ],
+      "output": "\"\\u{e0020}\""
+    },
+    {
+      "name": "escaped: Cf last, U+E007F cancel tag",
+      "input": [
+        917631
+      ],
+      "output": "\"\\u{e007f}\""
+    },
+    {
+      "name": "escaped: Zl, U+2028 line separator",
+      "input": [
+        8232
+      ],
+      "output": "\"\\u2028\""
+    },
+    {
+      "name": "escaped: Zp, U+2029 paragraph separator",
+      "input": [
+        8233
+      ],
+      "output": "\"\\u2029\""
+    },
+    {
+      "name": "escaped: lone high surrogate, U+D800",
+      "input": [
+        55296
+      ],
+      "output": "\"\\ud800\""
+    },
+    {
+      "name": "escaped: lone low surrogate, U+DFFF",
+      "input": [
+        57343
+      ],
+      "output": "\"\\udfff\""
+    },
+    {
+      "name": "unchanged: U+0020 space, above C0",
+      "input": [
+        32
+      ],
+      "output": "\" \""
+    },
+    {
+      "name": "unchanged: U+007E tilde, below DEL",
+      "input": [
+        126
+      ],
+      "output": "\"~\""
+    },
+    {
+      "name": "unchanged: U+00A0 no-break space, above C1",
+      "input": [
+        160
+      ],
+      "output": "\" \""
+    },
+    {
+      "name": "unchanged: U+00AC not sign, below U+00AD",
+      "input": [
+        172
+      ],
+      "output": "\"¬\""
+    },
+    {
+      "name": "unchanged: U+00AE registered sign, above U+00AD",
+      "input": [
+        174
+      ],
+      "output": "\"®\""
+    },
+    {
+      "name": "unchanged: U+2027 hyphenation point, below U+2028",
+      "input": [
+        8231
+      ],
+      "output": "\"‧\""
+    },
+    {
+      "name": "unchanged: U+2030 per mille, above the isolates",
+      "input": [
+        8240
+      ],
+      "output": "\"‰\""
+    },
+    {
+      "name": "unchanged: U+205F medium mathematical space, below U+2060",
+      "input": [
+        8287
+      ],
+      "output": "\" \""
+    },
+    {
+      "name": "unchanged: U+FEFE, below U+FEFF",
+      "input": [
+        65278
+      ],
+      "output": "\"﻾\""
+    },
+    {
+      "name": "unchanged: U+E0080 unassigned, above U+E007F",
+      "input": [
+        917632
+      ],
+      "output": "\"󠂀\""
+    },
+    {
+      "name": "unchanged: U+00E9 e acute",
+      "input": [
+        233
+      ],
+      "output": "\"é\""
+    },
+    {
+      "name": "unchanged: U+1F600 an astral pair",
+      "input": [
+        128512
+      ],
+      "output": "\"😀\""
+    },
+    {
+      "name": "quotes and backslashes are escaped by JSON.stringify",
+      "input": [
+        97,
+        34,
+        98,
+        92,
+        99
+      ],
+      "output": "\"a\\\"b\\\\c\""
+    },
+    {
+      "name": "C0 short escapes",
+      "input": [
+        8,
+        9,
+        10,
+        12,
+        13
+      ],
+      "output": "\"\\b\\t\\n\\f\\r\""
+    },
+    {
+      "name": "a refused value that would rewrite the screen",
+      "input": [
+        97,
+        27,
+        91,
+        50,
+        74,
+        155,
+        72,
+        8238,
+        98
+      ],
+      "output": "\"a\\u001b[2J\\u009bH\\u202eb\""
+    },
+    {
+      "name": "default max is 40 code points",
+      "input": [
+        97,
+        97,
+        97,
+        97,
+        97,
+        97,
+        97,
+        97,
+        97,
+        97,
+        97,
+        97,
+        97,
+        97,
+        97,
+        97,
+        97,
+        97,
+        97,
+        97,
+        97,
+        97,
+        97,
+        97,
+        97,
+        97,
+        97,
+        97,
+        97,
+        97,
+        97,
+        97,
+        97,
+        97,
+        97,
+        97,
+        97,
+        97,
+        97,
+        97,
+        97
+      ],
+      "output": "\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\""
+    },
+    {
+      "name": "max cuts at code points",
+      "input": [
+        97,
+        98,
+        128512,
+        99
+      ],
+      "max": 3,
+      "output": "\"ab😀\""
+    },
+    {
+      "name": "max never splits a pair",
+      "input": [
+        97,
+        128512
+      ],
+      "max": 1,
+      "output": "\"a\""
+    },
+    {
+      "name": "max 0 gives an empty quote",
+      "input": [
+        97
+      ],
+      "max": 0,
+      "output": "\"\""
+    },
+    {
+      "name": "a lone surrogate counts as one code point",
+      "input": [
+        55296,
+        97,
+        98
+      ],
+      "max": 2,
+      "output": "\"\\ud800a\""
+    },
+    {
+      "name": "the cut happens before escaping",
+      "input": [
+        97,
+        917505,
+        98
+      ],
+      "max": 2,
+      "output": "\"a\\u{e0001}\""
+    },
+    {
+      "name": "an empty string",
+      "input": [],
+      "output": "\"\""
+    }
+  ]
+}

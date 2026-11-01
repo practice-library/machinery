@@ -179,6 +179,27 @@ jobs:
           "$RUNNER_TEMP/gen/bin/python" -I -c 'import sys; compile(open(sys.argv[1], encoding="utf-8").read(), sys.argv[1], "exec")' \
             "$GITHUB_WORKSPACE/gen/python/src/machinery/plugin/v1alpha1/plugin_connect.py"
 
+  js:
+    name: js
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24.22.0
+      - name: quoteOneLine meets conformance/quote-one-line.json and every code point's category
+        run: node --test tests/js/quote-one-line.test.mjs
+      - name: Each guard of lib/js, removed, makes its tests fail
+        run: node tests/js/guards.mjs
+      - name: lib/js/README.md names the module's sha256
+        run: |
+          set -euo pipefail
+          want="sha256: $(sha256sum lib/js/quote-one-line.mjs | cut -d' ' -f1)"
+          grep -qxF "$want" lib/js/README.md || { echo "::error file=lib/js/README.md::not $want"; exit 1; }
+
   leak-scan:
     uses: practice-library/.github/.github/workflows/leak-scan.yml@75a03317883e16f7ad93f1239dc53c9d0e1c4cc1 # v2.4.0
 
@@ -216,7 +237,7 @@ jobs:
 
   gate:
     if: always()
-    needs: [unit, contract-schemas, recorded-report, conformance, proto, leak-scan, denylist, removed-paths, release-note, schema-loosening]
+    needs: [unit, contract-schemas, recorded-report, conformance, proto, js, leak-scan, denylist, removed-paths, release-note, schema-loosening]
     uses: practice-library/.github/.github/workflows/gate.yml@75a03317883e16f7ad93f1239dc53c9d0e1c4cc1 # v2.4.0
     with:
       needs: ${{ toJSON(needs) }}
