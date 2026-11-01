@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Every example in contract/examples/v0 must validate against its schema, and every counter-example must be
+"""Every example in contract/examples/<version> must validate against its schema, and every counter-example must be
 rejected with a finding (the validator's exit code 2), not with an error.
 
-  python3 contract/check_examples.py --validator jsonschema --report-schema <refresh-report schema.json>
+  python3 contract/check_examples.py --validator jsonschema --report-schema <refresh-report schema.json> \
+      [--contract contract/v1alpha1 --examples contract/examples/v1alpha1]
 
 Exit 0 when each holds, 1 otherwise.
 """
@@ -26,8 +27,9 @@ def main(argv=None) -> int:
     ap.add_argument("--validator", required=True, help="the sourcemeta jsonschema CLI")
     ap.add_argument("--report-schema", required=True, help="the refresh-report schema at the pin in contract/pins.json")
     ap.add_argument("--examples", default=os.path.join(HERE, "examples", "v0"))
+    ap.add_argument("--contract", default=os.path.join(HERE, "v0"), help="the directory the schemas resolve from")
     a = ap.parse_args(argv)
-    validator = Validator(a.validator, a.report_schema)
+    validator = Validator(a.validator, a.report_schema, a.contract)
     passed = failed = 0
     for name in sorted(os.listdir(a.examples)):
         if not name.endswith(".json"):

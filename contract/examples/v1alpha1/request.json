@@ -1,0 +1,368 @@
+{
+  "groups": [
+    {
+      "schema": "https://github.com/practice-library/machinery/contract/v1alpha1/request.schema.json#/$defs/describeRequest",
+      "valid": [
+        {
+          "name": "caps only",
+          "instance": {
+            "caps": {
+              "timeSeconds": 60,
+              "outputBytes": 1048576
+            }
+          }
+        }
+      ],
+      "invalid": [
+        {
+          "name": "an input on Describe",
+          "instance": {
+            "caps": {
+              "timeSeconds": 60,
+              "outputBytes": 1048576
+            },
+            "input": {}
+          }
+        },
+        {
+          "name": "the v0 frame: contract and verb",
+          "instance": {
+            "contract": "0",
+            "verb": "describe",
+            "caps": {
+              "timeSeconds": 60,
+              "outputBytes": 1048576
+            }
+          }
+        },
+        {
+          "name": "no caps",
+          "instance": {}
+        }
+      ]
+    },
+    {
+      "schema": "https://github.com/practice-library/machinery/contract/v1alpha1/request.schema.json#/$defs/planRequest",
+      "valid": [
+        {
+          "name": "caps and input",
+          "instance": {
+            "caps": {
+              "timeSeconds": 60,
+              "outputBytes": 1048576
+            },
+            "input": {}
+          }
+        }
+      ],
+      "invalid": [
+        {
+          "name": "network on Plan, which opens no connection",
+          "instance": {
+            "caps": {
+              "timeSeconds": 60,
+              "outputBytes": 1048576
+            },
+            "network": {
+              "hosts": []
+            },
+            "input": {}
+          }
+        },
+        {
+          "name": "no input",
+          "instance": {
+            "caps": {
+              "timeSeconds": 60,
+              "outputBytes": 1048576
+            }
+          }
+        }
+      ]
+    },
+    {
+      "schema": "https://github.com/practice-library/machinery/contract/v1alpha1/request.schema.json#/$defs/runUnitRequest",
+      "valid": [
+        {
+          "name": "listed hosts",
+          "instance": {
+            "caps": {
+              "timeSeconds": 60,
+              "outputBytes": 1048576
+            },
+            "network": {
+              "hosts": [
+                "docs.example.com"
+              ]
+            },
+            "input": {}
+          }
+        },
+        {
+          "name": "replay, each URL to an array as in v0",
+          "instance": {
+            "caps": {
+              "timeSeconds": 60,
+              "outputBytes": 1048576
+            },
+            "network": {
+              "replay": {
+                "start": "2026-10-31T12:00:00Z",
+                "exchanges": {
+                  "https://docs.example.com/robots.txt": [
+                    {
+                      "status": 200,
+                      "headers": {
+                        "content-type": "text/plain"
+                      },
+                      "body": "User-agent: *\nAllow: /\n"
+                    }
+                  ],
+                  "https://docs.example.com/a": [
+                    {
+                      "error": "connection reset"
+                    }
+                  ]
+                }
+              }
+            },
+            "input": {}
+          }
+        },
+        {
+          "name": "the smallest caps",
+          "instance": {
+            "caps": {
+              "timeSeconds": 1,
+              "outputBytes": 1024
+            },
+            "network": {
+              "hosts": []
+            },
+            "input": {}
+          }
+        }
+      ],
+      "invalid": [
+        {
+          "name": "no network on RunUnit",
+          "instance": {
+            "caps": {
+              "timeSeconds": 60,
+              "outputBytes": 1048576
+            },
+            "input": {}
+          }
+        },
+        {
+          "name": "network with neither hosts nor replay",
+          "instance": {
+            "caps": {
+              "timeSeconds": 60,
+              "outputBytes": 1048576
+            },
+            "network": {},
+            "input": {}
+          }
+        },
+        {
+          "name": "network with both hosts and replay",
+          "instance": {
+            "caps": {
+              "timeSeconds": 60,
+              "outputBytes": 1048576
+            },
+            "network": {
+              "hosts": [],
+              "replay": {
+                "start": "2026-10-31T12:00:00Z",
+                "exchanges": {}
+              }
+            },
+            "input": {}
+          }
+        },
+        {
+          "name": "exchanges in proto message form, not an array",
+          "instance": {
+            "caps": {
+              "timeSeconds": 60,
+              "outputBytes": 1048576
+            },
+            "network": {
+              "replay": {
+                "start": "2026-10-31T12:00:00Z",
+                "exchanges": {
+                  "https://docs.example.com/robots.txt": {
+                    "responses": [
+                      {
+                        "status": 200,
+                        "headers": {
+                          "content-type": "text/plain"
+                        },
+                        "body": "User-agent: *\nAllow: /\n"
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            "input": {}
+          }
+        },
+        {
+          "name": "a recorded response with both status and error",
+          "instance": {
+            "caps": {
+              "timeSeconds": 60,
+              "outputBytes": 1048576
+            },
+            "network": {
+              "replay": {
+                "start": "2026-10-31T12:00:00Z",
+                "exchanges": {
+                  "https://docs.example.com/a": [
+                    {
+                      "status": 200,
+                      "error": "x"
+                    }
+                  ]
+                }
+              }
+            },
+            "input": {}
+          }
+        },
+        {
+          "name": "timeSeconds 0",
+          "instance": {
+            "caps": {
+              "timeSeconds": 0,
+              "outputBytes": 1024
+            },
+            "network": {
+              "hosts": []
+            },
+            "input": {}
+          }
+        },
+        {
+          "name": "timeSeconds 3601",
+          "instance": {
+            "caps": {
+              "timeSeconds": 3601,
+              "outputBytes": 1024
+            },
+            "network": {
+              "hosts": []
+            },
+            "input": {}
+          }
+        },
+        {
+          "name": "outputBytes 1023",
+          "instance": {
+            "caps": {
+              "timeSeconds": 1,
+              "outputBytes": 1023
+            },
+            "network": {
+              "hosts": []
+            },
+            "input": {}
+          }
+        },
+        {
+          "name": "outputBytes 16777217",
+          "instance": {
+            "caps": {
+              "timeSeconds": 1,
+              "outputBytes": 16777217
+            },
+            "network": {
+              "hosts": []
+            },
+            "input": {}
+          }
+        },
+        {
+          "name": "a host with an upper-case letter",
+          "instance": {
+            "caps": {
+              "timeSeconds": 60,
+              "outputBytes": 1048576
+            },
+            "network": {
+              "hosts": [
+                "Docs.example.com"
+              ]
+            },
+            "input": {}
+          }
+        }
+      ]
+    },
+    {
+      "schema": "https://github.com/practice-library/machinery/contract/v1alpha1/request.schema.json#/$defs/mergeRequest",
+      "valid": [
+        {
+          "name": "caps and input",
+          "instance": {
+            "caps": {
+              "timeSeconds": 60,
+              "outputBytes": 1048576
+            },
+            "input": {}
+          }
+        }
+      ],
+      "invalid": [
+        {
+          "name": "network on Merge",
+          "instance": {
+            "caps": {
+              "timeSeconds": 60,
+              "outputBytes": 1048576
+            },
+            "network": {
+              "hosts": []
+            },
+            "input": {}
+          }
+        }
+      ]
+    },
+    {
+      "schema": "https://github.com/practice-library/machinery/contract/v1alpha1/request.schema.json#/$defs/runRequest",
+      "valid": [
+        {
+          "name": "listed hosts",
+          "instance": {
+            "caps": {
+              "timeSeconds": 60,
+              "outputBytes": 1048576
+            },
+            "network": {
+              "hosts": [
+                "docs.example.com"
+              ]
+            },
+            "input": {}
+          }
+        }
+      ],
+      "invalid": [
+        {
+          "name": "no network on Run",
+          "instance": {
+            "caps": {
+              "timeSeconds": 60,
+              "outputBytes": 1048576
+            },
+            "input": {}
+          }
+        }
+      ]
+    }
+  ]
+}
