@@ -11,7 +11,7 @@
 
 ## Regenerating
 
-With buf 1.75.0, Go 1.26 or later, and Python 3.11 or later:
+With buf 1.75.0, Go 1.26 or later, and Python 3.11 or later, on linux x86_64 or macOS arm64 (`gen/requirements.txt` has the native protobuf-py-ext wheel's hashes for those two only):
 
 ```sh
 (cd gen/go && go build -o "$BIN/" google.golang.org/protobuf/cmd/protoc-gen-go connectrpc.com/connect/v2/cmd/protoc-gen-connect-go)
@@ -19,14 +19,14 @@ python3 -m venv "$VENV" && "$VENV/bin/python" -m pip install --require-hashes --
 PATH="$BIN:$VENV/bin:$PATH" buf generate
 ```
 
-The `proto` job of `checks.yml` does the same on every pull request. It deletes the generated files first, so a stale file fails too. It then vets and builds the Go module, builds the wheel twice and compares the bytes, installs the wheel, and imports the messages. The service module imports the Connect runtime, which this repository does not pin (the runtime PR does), so CI only compiles it.
+The `proto` job of `checks.yml` does the same on every pull request. It deletes the generated files first and compares against the commit, so a stale file fails too. It then vets and builds the Go module, builds the wheel twice and compares the bytes, installs the wheel, and imports the messages. The service module imports the Connect runtime, which this repository does not pin (the runtime PR does), so CI only compiles it.
 
 ## Releasing
 
 Nothing is published to a package registry: a registry would need a credential, and that is a separate decision. At a commit on `main` where `gen/VERSION` reads `X.Y.Z`, a maintainer:
 
 1. tags the Go module `gen/go/vX.Y.Z`, so `go get github.com/practice-library/machinery/gen/go@vX.Y.Z` resolves and `go.sum` pins it;
-2. runs `python3 gen/python/build_wheel.py --out dist`, and attaches the wheel to the GitHub release of that tag together with the sha256 it prints. Anyone can check the checksum by running the same command at the same commit; the `proto` job prints it at every head.
+2. runs `python3 gen/python/build_wheel.py --out dist` on Linux or macOS, and attaches the wheel to the GitHub release of that tag together with the sha256 it prints. Anyone can check the checksum by running the same command at the same commit on a POSIX system (on Windows, zip records a different system); the `proto` job prints it at every head.
 
 A consumer pins the wheel by that sha256 (`pip install --require-hashes`).
 

@@ -111,9 +111,18 @@ class Version(unittest.TestCase):
 
     def test_anything_else_is_refused(self):
         for text in ("0.1.0", "0.1.0\n\n", "v0.1.0\n", "0.1\n", "01.2.3\n", "0.1.0-rc1\n", " 0.1.0\n", "0.1.0\r\n",
-                     "0.1.0\n0.2.0\n", "1٠.1.0\n"):
+                     "0.1.0\n0.2.0\n", "1٠.1.0\n", "1.1٠.0\n", "1.0.1٠\n"):
             with self.subTest(text=text), self.assertRaises(SystemExit):
                 self.read(text)
+
+    def test_the_runtime_it_requires_is_what_generated_it(self):
+        # a generator bump in gen/requirements.txt must move the wheel's Requires-Dist with it
+        with open(os.path.join(ROOT, "gen", "requirements.txt"), encoding="utf-8") as f:
+            pins = dict(line.split(" ", 1)[0].split("==") for line in f if "==" in line and not line.startswith("#"))
+        for req in bw.REQUIRES:
+            name, ver = req.split("==")
+            gen = {"protobuf-py": "protobuf-py", "connectrpc": "protoc-gen-connectrpc"}[name]
+            self.assertEqual(pins[gen], ver, req)
 
     def test_the_committed_version_reads(self):
         self.assertRegex(bw.version(), r"^\d+\.\d+\.\d+$")

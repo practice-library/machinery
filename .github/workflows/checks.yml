@@ -151,7 +151,8 @@ jobs:
           rm -rf -- gen/python/src
           buf generate
           git add -N gen
-          git diff --exit-code --stat -- gen || { echo "::error::gen/ is not what buf generate writes; run it and commit"; exit 1; }
+          # against HEAD, not the index: add -N also stages the deletion of a file no longer generated
+          git diff --exit-code --stat HEAD -- gen || { echo "::error::gen/ is not what buf generate writes; run it and commit"; exit 1; }
       - name: The Go module vets and builds
         working-directory: gen/go
         run: GOFLAGS=-mod=readonly go vet ./... && GOFLAGS=-mod=readonly go build ./...

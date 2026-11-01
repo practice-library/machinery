@@ -1,3 +1,5 @@
+# Line endings fixed, so the wheel built from a checkout is the same bytes on any OS.
+gen/** text eol=lf
 # Written by buf generate (gen/README.md): collapsed in diffs, and not counted as the repository's own code.
 gen/go/machinery/** linguist-generated=true
 gen/python/src/** linguist-generated=true
