@@ -40,7 +40,7 @@ For the `fact-refresh` job (`v0/fact-refresh.schema.json`):
 - **`plan`:** one graph, as its nodes and `policy/sources.json`, becomes a list of independent work units, one per source host. The host is the unit's shard key. Each unit also carries:
   - its pacing (seconds between two requests to its host);
   - its request budget, robots.txt included;
-  - the due facts, oldest `measuredAt` first.
+  - the due facts, oldest `measuredAt` first. A fact is due once its host's `minIntervalDays` have passed, or always when the optional input field `ignoreInterval` is true; the caps below apply either way.
 
   Facts on a host not listed for the vendor are decided at once as `unreadable` (`blocked:`). A source the report schema's URL definition rejects is left out and named in `notRead`.
 

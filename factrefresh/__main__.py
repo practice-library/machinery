@@ -18,9 +18,12 @@ def cmd_refresh(a: argparse.Namespace) -> int:
     commit = a.commit or subprocess.run(["git", "-C", a.graphs, "rev-parse", "HEAD"], capture_output=True,
                                         text=True, check=True).stdout.strip()
     policy = load_policy(a.graphs)
-    refresher = Refresher(policy, UrllibTransport(), pace=a.pace)
+    refresher = Refresher(policy, UrllibTransport(), pace=a.pace, ignore_interval=a.ignore_interval)
     notes = []
     lines = ["| Graph | Requests | unchanged | changed | unreadable | Aborted |", "|---|---|---|---|---|---|"]
+    if a.ignore_interval:
+        # the refresh-report schema has no place for run options, so the run says it here
+        lines = ["Run option: `--ignore-interval`: every fact was due, whatever minIntervalDays.", ""] + lines
     for graph in a.graph or find_graphs(a.graphs):
         report = refresher.refresh_graph(a.graphs, graph, commit, a.run_id, a.run_url)
         path = os.path.join(a.out, graph + ".json")
@@ -96,6 +99,8 @@ def main(argv=None) -> int:
     r.add_argument("--commit", help="the checkout's commit (default: git rev-parse HEAD)")
     r.add_argument("--graph", action="append", help="only this <domain>/<vendor> (repeatable)")
     r.add_argument("--pace", type=float, default=DEFAULT_PACE_SECONDS, help="seconds between two requests to one host")
+    r.add_argument("--ignore-interval", action="store_true",
+                   help="every fact is due, whatever minIntervalDays; caps, robots.txt and pacing still apply")
     r.set_defaults(fn=cmd_refresh)
 
     d = sub.add_parser("download", help="download the refresh-report artifacts of recent successful runs")

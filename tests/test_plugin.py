@@ -74,6 +74,41 @@ class Plan(unittest.TestCase):
         _, env = call(req)
         self.assertEqual([f["node"] for f in env["data"]["units"][0]["facts"]], ["rule.example.d8", "rule.example.d7"])
 
+    def interval_plan(self, ignore, cap=50, host_cap=20):
+        # read 1, 6 and 7 days before the run's start (2026-10-31); minIntervalDays is 7
+        req = plan_request(cap, [("docs.example.com", host_cap, [(f"rule.example.d{d}", f"https://docs.example.com/{d}", f"2026-10-{31 - d}")
+                                                                 for d in (1, 6, 7)])])
+        if ignore is not None:
+            req["input"]["ignoreInterval"] = ignore
+        code, env = call(req)
+        self.assertEqual(code, 0, env)
+        return env["data"]
+
+    def test_ignore_interval_makes_a_fact_read_yesterday_due(self):
+        facts = [f["node"] for f in self.interval_plan(True)["units"][0]["facts"]]
+        self.assertEqual(facts, ["rule.example.d7", "rule.example.d6", "rule.example.d1"])
+
+    def test_without_ignore_interval_the_7_and_6_day_boundary_holds(self):
+        for ignore in (None, False):
+            facts = [f["node"] for f in self.interval_plan(ignore)["units"][0]["facts"]]
+            self.assertEqual(facts, ["rule.example.d7"], ignore)
+
+    def test_ignore_interval_leaves_the_caps_in_force(self):
+        # all three facts are due, needing 4 requests (robots.txt and 3 pages); the caps still bound the budget
+        for kw, budget in (({"cap": 3}, 3), ({"host_cap": 2}, 2)):  # run-wide cap, then the host's own cap
+            units = self.interval_plan(True, **kw)["units"]
+            self.assertEqual(len(units[0]["facts"]), 3, kw)
+            self.assertEqual(units[0]["budget"]["requests"], budget, kw)
+        self.assertEqual(self.interval_plan(True, cap=1)["units"], [])  # no room for robots.txt and a page
+
+    def test_ignore_interval_must_be_a_boolean(self):
+        for value in ("true", 1, None):
+            req = plan_request(50, [("docs.example.com", 20, [("rule.example.d1", "https://docs.example.com/1", "2026-10-30")])])
+            req["input"]["ignoreInterval"] = value
+            code, env = call(req)
+            self.assertEqual(code, 2, value)
+            self.assertIn("ignoreInterval", env["warnings"][0])
+
     def test_budgets_never_exceed_the_run_cap(self):
         for cap in (2, 3, 4, 5, 6, 7):
             got, _ = self.budgets(cap, [2, 2, 2])

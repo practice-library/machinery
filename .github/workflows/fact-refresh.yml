@@ -11,6 +11,10 @@ on:
         description: Branch, tag or full commit of practice-library/graphs to read
         type: string
         default: main
+      ignore-interval:
+        description: Re-read every fact, whatever minIntervalDays (caps, robots.txt and pacing still apply)
+        type: boolean
+        default: false
 permissions: {}
 concurrency:
   group: fact-refresh
@@ -51,7 +55,13 @@ jobs:
       - name: Refresh every graph
         env:
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        run: python3 -m factrefresh refresh --graphs graphs --out reports --run-id "$GITHUB_RUN_ID" --run-url "$RUN_URL"
+          # true only from a dispatch that ticked it; empty on the schedule
+          IGNORE_INTERVAL: ${{ github.event_name == 'workflow_dispatch' && inputs.ignore-interval == true }}
+        run: |
+          set -euo pipefail
+          extra=()
+          if [ "$IGNORE_INTERVAL" = "true" ]; then extra+=(--ignore-interval); fi
+          python3 -m factrefresh refresh --graphs graphs --out reports --run-id "$GITHUB_RUN_ID" --run-url "$RUN_URL" "${extra[@]}"
       - name: Every report matches spec/refresh-report of the checkout
         run: |
           set -euo pipefail

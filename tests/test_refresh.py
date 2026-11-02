@@ -503,5 +503,63 @@ class Pacing(unittest.TestCase):
         self.assertEqual(by_node(report)["term.example.support"]["outcome"], "unchanged")
 
 
+class IgnoreInterval(unittest.TestCase):
+    """--ignore-interval: every fact is due whatever minIntervalDays; caps, robots.txt and pacing still hold.
+    The run starts on 2026-10-31; feature.example.fresh was read on 2026-10-30 and its host's minIntervalDays is 7."""
+
+    FEATURES = "https://docs.example.com/features"
+
+    def run_with(self, ignore_interval, root=GRAPHS, measured_at=None):
+        recorded = exchanges()
+        recorded[self.FEATURES] = [{"status": 200, "headers": {"content-type": "text/html"},
+                                    "body": "<p>Webhooks are available on every plan.</p>"}]
+        # the recorded 503 on /pricing stops docs.example.com for the run; a 404 leaves it open for /features
+        recorded["https://docs.example.com/pricing"] = [{"status": 404, "body": ""}]
+        if measured_at is not None:
+            path = os.path.join(root, "vendors/example/graph/nodes/feature.example.fresh.json")
+            with open(path, encoding="utf-8") as f:
+                node = json.load(f)
+            node["measuredAt"] = measured_at
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(node, f)
+        clock = FakeClock()
+        t = Replay(recorded, clock)
+        refresher = Refresher(load_policy(root), t, clock, ignore_interval=ignore_interval)
+        return refresher.refresh_graph(root, "vendors/example", COMMIT, 7, RUN_URL), t
+
+    def test_a_fact_read_yesterday_is_due(self):
+        report, t = self.run_with(True)
+        self.assertIn(self.FEATURES, t.urls())
+        self.assertEqual(by_node(report)["feature.example.fresh"]["outcome"], "unchanged")
+        # robots.txt still comes first, and pages of one host are still 2 s apart
+        self.assertEqual(t.urls()[0], "https://docs.example.com/robots.txt")
+        docs = [at for url, _h, at in t.calls if url.startswith("https://docs.example.com/")]
+        self.assertTrue(all((b - a).total_seconds() >= 2.0 for a, b in zip(docs, docs[1:])))
+
+    def test_without_the_flag_the_7_and_6_day_boundary_holds(self):
+        report, t = self.run_with(False)  # read yesterday: not due
+        self.assertNotIn(self.FEATURES, t.urls())
+        self.assertNotIn("feature.example.fresh", by_node(report))
+        for measured_at, due in (("2026-10-24", True), ("2026-10-25", False)):  # 7 days, 6 days
+            with GraphsCopy() as root:
+                report, t = self.run_with(False, root=root, measured_at=measured_at)
+            self.assertEqual(self.FEATURES in t.urls(), due, measured_at)
+            self.assertEqual("feature.example.fresh" in by_node(report), due, measured_at)
+
+    def test_the_run_cap_still_limits_the_run(self):
+        with GraphsCopy() as root:
+            edit_policy(root, lambda p: p.update(maxRequestsPerRun=3))
+            report, t = self.run_with(True, root=root)
+        self.assertEqual(len(t.calls), 3)
+        self.assertEqual(report["requests"], 3)
+        self.assertNotIn(self.FEATURES, t.urls())  # the newest fact waits for the next run
+
+    def test_the_host_cap_still_limits_the_run(self):
+        with GraphsCopy() as root:
+            edit_policy(root, lambda p: p["hosts"][0].update(maxRequestsPerRun=2))
+            report, t = self.run_with(True, root=root)
+        self.assertEqual(sum(1 for u in t.urls() if "docs.example.com" in u), 2)
+
+
 if __name__ == "__main__":
     unittest.main()

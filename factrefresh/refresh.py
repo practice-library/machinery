@@ -77,12 +77,14 @@ class Page:
 
 class Refresher:
     def __init__(self, policy: Policy, transport, clock: Optional[Clock] = None,
-                 pace: float = DEFAULT_PACE_SECONDS, deadline: Optional[datetime] = None) -> None:
+                 pace: float = DEFAULT_PACE_SECONDS, deadline: Optional[datetime] = None,
+                 ignore_interval: bool = False) -> None:
         self.policy = policy
         self.transport = transport
         self.clock = clock or Clock()
         self.pace = pace
         self.deadline = deadline  # no request starts that could still be running at this time
+        self.ignore_interval = ignore_interval  # every fact is due, whatever minIntervalDays; nothing else changes
         self.run_requests = 0  # across every graph of the run
         self.host_requests: Dict[str, int] = {}
         self.last_request: Dict[str, datetime] = {}
@@ -271,7 +273,7 @@ class Refresher:
                                 "reason": f"blocked: {parts.hostname} is not listed for {vendor} in policy/sources.json; not fetched"})
                 continue
             age = (today - date.fromisoformat(node["measuredAt"])).days
-            if age < host.min_interval_days:
+            if age < host.min_interval_days and not self.ignore_interval:
                 continue  # read recently enough; minIntervalDays of its host
             due.append((node, host))
         due.sort(key=lambda p: (p[0]["measuredAt"], p[0]["id"]))
