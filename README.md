@@ -34,6 +34,8 @@ For each graph, facts are due when their `measuredAt` is at least the host's `mi
 
 With the same checkout and the same responses the report is the same, byte for byte (results sorted by node).
 
+**Re-reading every fact once.** `refresh --ignore-interval` makes every fact due whatever its host's `minIntervalDays`, for example to check a graph that was just built. Nothing else changes: the run-wide and per-host request caps, robots.txt, the pace between requests and the refusal of unlisted or non-https sources all apply as above, so facts the caps do not reach still wait for the next run. To run it from Actions, dispatch the workflow with the boolean input `ignore-interval` ticked (default false); the scheduled run never passes it. The refresh-report schema has no place for run options, so the report does not record it; the run's step summary starts with a `Run option: --ignore-interval` line instead. The plugin's `plan` takes the same option as the optional input field `ignoreInterval` (false when absent).
+
 ### Running the opener
 
 As the organisation's app, with `GH_TOKEN` set to an installation token, from a clone of this repository:

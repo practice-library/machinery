@@ -91,6 +91,9 @@ def plan(inp: dict) -> Tuple[dict, list]:
     graph, policy = inp["graph"], inp["policy"]
     vendor = graph.split("/", 1)[1]
     now = parse_time(inp["now"])
+    ignore_interval = inp.get("ignoreInterval", False)
+    if type(ignore_interval) is not bool:
+        raise bad("plan input ignoreInterval must be true or false")
     hosts = {h["host"]: h for h in policy["hosts"] if h["vendor"] == vendor}
     not_read, decided = [], []
     due: Dict[str, List[dict]] = {}
@@ -104,7 +107,8 @@ def plan(inp: dict) -> Tuple[dict, list]:
             decided.append({"node": node["id"], "source": src, "fetchedAt": inp["now"], "outcome": "unreadable",
                             "reason": f"blocked: {src.split('/')[2][:120]} is not listed for {vendor[:60]} in policy/sources.json; not fetched"[:300]})
             continue
-        if (now.date() - datetime.strptime(node["measuredAt"], "%Y-%m-%d").date()).days < int(host["minIntervalDays"]):
+        recent = (now.date() - datetime.strptime(node["measuredAt"], "%Y-%m-%d").date()).days < int(host["minIntervalDays"])
+        if recent and not ignore_interval:
             continue  # read recently enough
         due.setdefault(host["host"], []).append(
             {"node": node["id"], "source": src, "measuredAt": node["measuredAt"], "quote": quote_form(node["attrs"]["quote"])})

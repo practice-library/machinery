@@ -877,9 +877,39 @@
       "policy": {},
       "nodes": []
      }
+    },
+    {
+     "name": "ignoreInterval true",
+     "instance": {
+      "graph": "vendors/example",
+      "commit": "0000000000000000000000000000000000000000",
+      "run": {
+       "id": 1,
+       "url": "https://github.com/practice-library/graphs/actions/runs/1"
+      },
+      "now": "2026-10-31T12:00:00Z",
+      "policy": {},
+      "nodes": [],
+      "ignoreInterval": true
+     }
     }
    ],
    "invalid": [
+    {
+     "name": "ignoreInterval as a string",
+     "instance": {
+      "graph": "vendors/example",
+      "commit": "0000000000000000000000000000000000000000",
+      "run": {
+       "id": 1,
+       "url": "https://github.com/practice-library/graphs/actions/runs/1"
+      },
+      "now": "2026-10-31T12:00:00Z",
+      "policy": {},
+      "nodes": [],
+      "ignoreInterval": "true"
+     }
+    },
     {
      "name": "no nodes",
      "instance": {

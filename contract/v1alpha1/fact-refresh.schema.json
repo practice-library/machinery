@@ -14,7 +14,8 @@
         "run": {"$ref": "#/$defs/run"},
         "now": {"$ref": "#/$defs/time", "description": "The run's start; due facts are decided against its date."},
         "policy": {"type": "object", "description": "The graphs repository's policy/sources.json, as it is in the commit."},
-        "nodes": {"type": "array", "items": {"type": "object"}, "description": "Every node of the graph, as it is in the commit."}
+        "nodes": {"type": "array", "items": {"type": "object"}, "description": "Every node of the graph, as it is in the commit."},
+        "ignoreInterval": {"type": "boolean", "description": "Optional, false when absent. When true, every fact is due whatever its host's minIntervalDays; caps, robots.txt, pacing and the listed hosts still apply."}
       }
     },
     "plan": {

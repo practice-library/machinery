@@ -28,7 +28,7 @@ What the runner cannot check: that a plugin reads no files, environment or secre
 
 The runner's own checks are tested against plugins that break them one way each (`tests/fixtures/plugins/bad.py`, `tests/test_runner.py`), and each check is mutated in `tests/guards.py`.
 
-The runner exits 0 only when every case passes. The Python plugin of this repository (`bin/fact-refresh-plugin`) passes all 61 cases in CI. A plugin that extracts text by replacing every tag with a space (`tests/fixtures/plugins/naive.py`) fails 13: the 12 design-review cases and the table-row case.
+The runner exits 0 only when every case passes. The Python plugin of this repository (`bin/fact-refresh-plugin`) passes all 63 cases in CI. A plugin that extracts text by replacing every tag with a space (`tests/fixtures/plugins/naive.py`) fails 13: the 12 design-review cases and the table-row case.
 
 ## Cases
 
@@ -46,7 +46,8 @@ One file per group. Each file has a `verb`, `defaults` (a request that each case
   - an unlisted host decided, a non-plain source not read;
   - the cap split with an exact sum;
   - never more than 3 in parallel;
-  - the `minIntervalDays` boundary (7 days due, 6 not).
+  - the `minIntervalDays` boundary (7 days due, 6 not);
+  - `ignoreInterval`: a fact read yesterday is due, and the run-wide cap still splits the plan.
 - `run-unit-safety.json` (a fact the budget does not reach is in `notReached`):
   - unchanged and changed;
   - `$10` not found in `$100`;

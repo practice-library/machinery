@@ -651,6 +651,171 @@
      ]
     }
    }
+  },
+  {
+   "name": "ignoreInterval true: a fact read yesterday is due",
+   "request": {
+    "input": {
+     "ignoreInterval": true,
+     "policy": {
+      "userAgent": "practice-library-graphs/1 (+https://github.com/practice-library/graphs)",
+      "maxRequestsPerRun": 50,
+      "retryAfterMaxSeconds": 60,
+      "unreadableRunsBeforeIssue": 3,
+      "hosts": [
+       {
+        "host": "docs.example.com",
+        "vendor": "example",
+        "robots": {
+         "url": "https://docs.example.com/robots.txt",
+         "checkedAt": "2026-10-31T12:00:00Z",
+         "verdict": "allowed"
+        },
+        "terms": {
+         "url": "https://docs.example.com/terms",
+         "checkedAt": "2026-10-31T12:00:00Z",
+         "quote": "Automated reading is permitted."
+        },
+        "format": "html",
+        "maxRequestsPerRun": 20,
+        "minIntervalDays": 7,
+        "maxBytes": 2000000,
+        "timeoutSeconds": 30
+       }
+      ]
+     },
+     "nodes": [
+      {
+       "id": "rule.example.yesterday",
+       "type": "rule",
+       "name": "rule.example.yesterday",
+       "source": "https://docs.example.com/1",
+       "measuredAt": "2026-10-30",
+       "attrs": {
+        "verdict": "allowed",
+        "fetched_at": "2026-10-30T10:00:00Z",
+        "quote": "Yesterday."
+       },
+       "edges": []
+      }
+     ]
+    }
+   },
+   "expect": {
+    "data": {
+     "units": [
+      {
+       "facts": [
+        {
+         "node": "rule.example.yesterday"
+        }
+       ]
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "ignoreInterval true: the run-wide cap still splits the plan",
+   "request": {
+    "input": {
+     "ignoreInterval": true,
+     "policy": {
+      "userAgent": "practice-library-graphs/1 (+https://github.com/practice-library/graphs)",
+      "maxRequestsPerRun": 3,
+      "retryAfterMaxSeconds": 60,
+      "unreadableRunsBeforeIssue": 3,
+      "hosts": [
+       {
+        "host": "docs.example.com",
+        "vendor": "example",
+        "robots": {
+         "url": "https://docs.example.com/robots.txt",
+         "checkedAt": "2026-10-31T12:00:00Z",
+         "verdict": "allowed"
+        },
+        "terms": {
+         "url": "https://docs.example.com/terms",
+         "checkedAt": "2026-10-31T12:00:00Z",
+         "quote": "Automated reading is permitted."
+        },
+        "format": "html",
+        "maxRequestsPerRun": 20,
+        "minIntervalDays": 7,
+        "maxBytes": 2000000,
+        "timeoutSeconds": 30
+       },
+       {
+        "host": "help.example.com",
+        "vendor": "example",
+        "robots": {
+         "url": "https://help.example.com/robots.txt",
+         "checkedAt": "2026-10-31T12:00:00Z",
+         "verdict": "allowed"
+        },
+        "terms": {
+         "url": "https://help.example.com/terms",
+         "checkedAt": "2026-10-31T12:00:00Z",
+         "quote": "Automated reading is permitted."
+        },
+        "format": "html",
+        "maxRequestsPerRun": 20,
+        "minIntervalDays": 7,
+        "maxBytes": 2000000,
+        "timeoutSeconds": 30
+       }
+      ]
+     },
+     "nodes": [
+      {
+       "id": "rule.example.docs",
+       "type": "rule",
+       "name": "rule.example.docs",
+       "source": "https://docs.example.com/1",
+       "measuredAt": "2026-10-29",
+       "attrs": {
+        "verdict": "allowed",
+        "fetched_at": "2026-10-29T10:00:00Z",
+        "quote": "Docs."
+       },
+       "edges": []
+      },
+      {
+       "id": "rule.example.help",
+       "type": "rule",
+       "name": "rule.example.help",
+       "source": "https://help.example.com/1",
+       "measuredAt": "2026-10-30",
+       "attrs": {
+        "verdict": "allowed",
+        "fetched_at": "2026-10-30T10:00:00Z",
+        "quote": "Help."
+       },
+       "edges": []
+      }
+     ]
+    }
+   },
+   "expect": {
+    "data": {
+     "units": [
+      {
+       "shardKey": "docs.example.com",
+       "budget": {
+        "requests": 3
+       }
+      }
+     ]
+    },
+    "notRead": [
+     {
+      "what": "rule.example.help",
+      "why": {
+       "$startsWith": "the run-wide request cap"
+      }
+     }
+    ]
+   }
   }
  ]
 }
