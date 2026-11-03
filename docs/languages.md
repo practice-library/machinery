@@ -49,7 +49,7 @@ This file states public requirements and public evidence only. Creating a reposi
   - No gRPC or binary, deliberately.
   - Native wheels for linux x86_64 and macOS arm64 only, with **no linux arm64**.
   - No release yet, and no real plugin yet.
-- **Cost:** 8 hash-pinned wheels (2 native), plus machinery's generated wheel.
+- **Cost:** 8 hash-pinned wheels in all: 7 from PyPI (2 of them native), plus machinery's generated wheel from the `gen/go/v0.1.0` release.
 - **The 2.7 minutes are not a language figure.** The unit job took 2m30s because `tests/guards.py` re-runs the suite 39 times. Conformance took 12 s.
 
 ### Rust

@@ -25,7 +25,6 @@ Status: **signed by the founder on 2026-11-02**, with docs/hld.md. This version 
 | `conformance/runtime/` | The runtime fixtures, moved from machinery-python's 56 cases at 233800c | **planned** for `contract/v1alpha1.1` |
 | `.github/workflows/checks.yml`, `release/**` | CI on release branches as well as `main` (§6) | **planned** |
 | `docs/` | This LLD, the HLD, the backlog plan and the language study | signed 2026-11-02 |
-| `contract/records/` | The handoff-record and session-record formats | **on hold** for a separate signature |
 
 ## 2. Contracts and interfaces
 
@@ -193,7 +192,7 @@ Let `C` be the full 40-character commit and `A` the archive the bot has built. T
   - **The archive:** `sha256` of the file equals `sha256(A)`, the hash the gate verified in check 3.
   - **`SHA256SUMS`:** its bytes equal exactly the one expected line, `<sha256(A)>  machinery-contract-v1alpha1.N.tar` followed by a newline. Its own hash is never compared with the archive's.
 - **`gh release create --verify-tag`** never creates a tag, and the release names `C` in its body.
-- **A retry** after a partial publish lists the release's assets first.
+- **A retry** after a partial publish first finds the existing release for the tag, draft or not (`gh api .../releases`, matched on `tag_name`). It never creates a second one, because a draft doesn't claim its tag and a second `gh release create` would make another draft. Then it lists that release's assets.
   - An asset already there, with the expected name and size, is downloaded and checked again by its own rule above.
   - A matching asset is kept.
   - A mismatching one, archive or `SHA256SUMS`, stops the release, which is left as a **draft** for a person. Nothing is deleted or overwritten.
@@ -218,7 +217,7 @@ The generated code stays in its own releases, `gen/go/vX.Y.Z` with the wheel att
 - **Commit:** `65b3d2ce34c67c7887a2564b3f694239aebb642d`, the head of `main` after #43.
 - **Gate:** every required check at that commit passed: unit, contract-schemas, recorded-report, conformance, proto, js, leak-scan, denylist, removed-paths, release-note, schema-loosening and gate. `heartbeat` was skipped, and it isn't required.
 - **Its gen release:** `gen/go/v0.1.0` (d6024652). `proto/` and `gen/` are byte-identical between the two commits.
-- **Since 269fd0f** (the commit consumers pin today), it adds only the optional `ignoreInterval` input and its cases (#43), which is additive.
+- **Since 269fd0f** (the commit an existing consumer pins), it adds only the optional `ignoreInterval` input and its cases (#43), which is additive.
 - **Archive sha256:** `f9c513a94e735ec850f1ba09d8a13f919342b34c2e4aad1c8eaa4a774cffad4f`, built with the pinned command of §6.4 on git 2.54.0 (`tar.umask=0002`). `contract-archive` doesn't exist at that commit, so the bot checks it another way. It builds the archive twice, from two fresh clones, with two different git versions. Both sha256 values go in the release body, and any mismatch stops the release.
 - **No runtime fixtures yet.** Those come in `contract/v1alpha1.1`.
 
@@ -243,10 +242,16 @@ To update it:
 5. **Tests:** the consumer's pin reader validates the release record (tag form, 40-hex commit, asset name, sha256) **and** still checks every vendored file against its record. Reading the commit from the pin must not remove that independent per-file check.
 6. **Goldens** produced from the vendored fixtures are regenerated and reviewed in the same change.
 
-**From commit 269fd0f to `contract/v1alpha1.0`,** one contract file a consumer may vendor has changed:
-- `conformance/connect/plan.json` gained the two `ignoreInterval` Plan cases (#43). Its new sha256 is `d8e10f8184d6c179f2215b47be306cf95e296066ae8cf741bff1a85c7a740a54` and its git blob is `d70f40cb521e25bbfa6dfeb648c5889f88bc0bde`.
-- Every other file under `proto/`, `conformance/connect/` and `contract/v1alpha1/` is unchanged, except `fact-refresh.schema.json`, which adds the optional `ignoreInterval`.
-- A consumer that runs the Plan fixtures must update any golden that lists their cases.
+**From commit 269fd0f to `contract/v1alpha1.0`,** seven files in the archive's paths changed (`git diff --name-status 269fd0f 65b3d2c -- proto contract conformance`). All of them come from #43's optional `ignoreInterval`, which is additive:
+
+| File | Who vendors it |
+|---|---|
+| `conformance/connect/plan.json`: two new Plan cases. New sha256 `d8e10f8184d6c179f2215b47be306cf95e296066ae8cf741bff1a85c7a740a54`, git blob `d70f40cb521e25bbfa6dfeb648c5889f88bc0bde` | v1alpha1 consumers |
+| `contract/v1alpha1/fact-refresh.schema.json`: the optional `ignoreInterval` | v1alpha1 consumers |
+| `conformance/cases/plan.json` and `contract/v0/fact-refresh.schema.json`: the same, for v0 | v0 consumers, such as the gateway |
+| `contract/examples/v0/fact-refresh.json`, `contract/README.md`, `conformance/README.md`: examples and prose | readers |
+
+`proto/` is unchanged. A consumer that runs the Plan fixtures must update any golden that lists their cases.
 
 **Verifying an asset is not regenerating it.** A consumer always checks the **published** sha256. It never relies on its own `git archive`, whose bytes depend on git's version and configuration. Only the bot regenerates the archive, with the pinned command, before publishing (§6.3).
 
