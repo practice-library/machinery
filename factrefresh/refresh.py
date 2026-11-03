@@ -287,7 +287,13 @@ class Refresher:
             except CapReached as cap:
                 if cap.scope == "run":
                     break  # run-wide cap reached: hosts not read are not fetched
-                continue  # this graph's own cap for the host is spent: its facts there wait for the next run
+                # This graph's own cap for the host is spent: its facts there wait for the next run, and each
+                # is named with the reason, as facts left out of the report are.
+                entry = listed[name]
+                for node, h in due:
+                    if h.host == name:
+                        self.skipped.append((graph, node["id"], f"waits: the cap of {entry.max_requests} requests to {name} for {vendor} is spent this run; read next run"))
+                continue
             robots.append(rec)
             if reason:
                 aborts.append(reason)

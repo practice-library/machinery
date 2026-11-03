@@ -109,6 +109,9 @@ class OnlyListedHosts(unittest.TestCase):
             self.assertTrue({"docs.example.com", "help.example.com"} <= hosts)
             self.assertNotIn("product.example.borrowed", by_node(report))
             self.assertIn("term.example.support", by_node(report))
+            waits = [(n, why) for g, n, why in refresher.skipped if g == "vendors/example"]
+            self.assertEqual([n for n, _ in waits], ["product.example.borrowed"])
+            self.assertTrue(waits[0][1].startswith("waits: the cap of 1 requests to docs.other.example.org for example"))
 
     def test_host_listed_for_another_vendor_is_not_fetched_for_this_one(self):
         report, t, _ = run()
