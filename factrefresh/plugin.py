@@ -166,7 +166,7 @@ def run_unit(unit: dict, network: Optional[dict], caps: dict) -> Tuple[dict, lis
                 max_bytes=int(h["maxBytes"]), timeout_seconds=int(h["timeoutSeconds"]))
     policy = Policy(user_agent=unit["userAgent"], max_requests=budget,
                     retry_after_max=int(unit["retryAfterMaxSeconds"]), unreadable_runs_before_issue=2,
-                    hosts={h["host"]: host})
+                    hosts={(h["host"], host.vendor): host})
     refresher = Refresher(policy, transport, clock, pace=float(unit["pacing"]["minIntervalSeconds"]))
     # leave room to write the answer: no request starts that could outlast the caller's time cap
     refresher.deadline = refresher.clock.now() + timedelta(seconds=max(1, int(caps["timeSeconds"]) - 5))

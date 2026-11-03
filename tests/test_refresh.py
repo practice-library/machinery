@@ -55,6 +55,64 @@ class OnlyListedHosts(unittest.TestCase):
         self.assertEqual(r["outcome"], "unreadable")
         self.assertTrue(r["reason"].startswith("blocked:"))
 
+    def test_a_host_listed_for_two_vendors_serves_both(self):
+        # One host may be listed once per graph (policy/sources.json allows it). Each graph keeps its own
+        # entry, whichever is listed first or last (machinery#49).
+        for first in ("example", "other"):
+            with self.subTest(listed_first=first), GraphsCopy() as root:
+                def add(data):
+                    other = next(h for h in data["hosts"] if h["host"] == "docs.other.example.org")
+                    mine = dict(other, vendor="example")
+                    data["hosts"].remove(other)
+                    data["hosts"] += [mine, other] if first == "example" else [other, mine]
+                edit_policy(root, add)
+                example, t, _ = run(root=root)
+                borrowed = by_node(example)["product.example.borrowed"]
+                self.assertNotIn("not listed", borrowed.get("reason", ""))
+                self.assertTrue([u for u in t.urls() if u == "https://docs.other.example.org/widget"])
+                other, _, _ = run(root=root, graph="vendors/other")
+                self.assertNotIn("not listed", by_node(other)["product.other.widget"].get("reason", ""))
+
+    def test_each_graph_has_its_own_cap_for_a_shared_host(self):
+        # One run refreshes both graphs. The graph refreshed first spends requests on the shared host; the
+        # second graph's cap for that host is its own entry's, so it still reads robots.txt and its page
+        # there, and every other host of its own (machinery#51 review).
+        with GraphsCopy() as root:
+            def add(data):
+                other = next(h for h in data["hosts"] if h["host"] == "docs.other.example.org")
+                data["hosts"].append(dict(other, vendor="example", maxRequestsPerRun=2))
+                other["maxRequestsPerRun"] = 5
+            edit_policy(root, add)
+            clock = FakeClock()
+            t = Replay({u: a * 4 for u, a in exchanges().items()}, clock)
+            refresher = Refresher(load_policy(root), t, clock, pace=2.0)
+            refresher.refresh_graph(root, "vendors/other", COMMIT, 7, RUN_URL)
+            together = refresher.refresh_graph(root, "vendors/example", COMMIT, 7, RUN_URL)
+            alone, _, _ = run(root=root)
+            self.assertEqual(sorted(r["host"] for r in together["robots"]), sorted(r["host"] for r in alone["robots"]))
+            self.assertEqual(sorted(by_node(together)), sorted(by_node(alone)))
+
+    def test_a_host_cap_spent_before_robots_skips_only_that_host(self):
+        # The graph's cap for one host is already spent when its robots.txt would be read: that host's facts
+        # wait for the next run, and the graph's other hosts are still read.
+        with GraphsCopy() as root:
+            def add(data):
+                other = next(h for h in data["hosts"] if h["host"] == "docs.other.example.org")
+                data["hosts"].append(dict(other, vendor="example", maxRequestsPerRun=1))
+            edit_policy(root, add)
+            clock = FakeClock()
+            refresher = Refresher(load_policy(root), Replay(exchanges(), clock), clock, pace=2.0)
+            refresher.host_requests[("docs.other.example.org", "example")] = 1
+            report = refresher.refresh_graph(root, "vendors/example", COMMIT, 7, RUN_URL)
+            hosts = {r["host"] for r in report["robots"]}
+            self.assertNotIn("docs.other.example.org", hosts)
+            self.assertTrue({"docs.example.com", "help.example.com"} <= hosts)
+            self.assertNotIn("product.example.borrowed", by_node(report))
+            self.assertIn("term.example.support", by_node(report))
+            waits = [(n, why) for g, n, why in refresher.skipped if g == "vendors/example"]
+            self.assertEqual([n for n, _ in waits], ["product.example.borrowed"])
+            self.assertTrue(waits[0][1].startswith("waits: the cap of 1 requests to docs.other.example.org for example"))
+
     def test_host_listed_for_another_vendor_is_not_fetched_for_this_one(self):
         report, t, _ = run()
         self.assertFalse([u for u in t.urls() if "docs.other.example.org" in u])
