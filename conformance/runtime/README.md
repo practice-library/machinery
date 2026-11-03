@@ -9,11 +9,13 @@ Every runtime repository runs these fixtures at a pinned contract release (`cont
 | File | Call | Cases | What the runtime decides |
 |---|---|---|---|
 | `describe.json` | `Describe` | 24 | Strict JSON (no duplicate keys, NaN or lone surrogates; unknown fields refused); the caps bounds; `protocol` and `contracts` added by the runtime; a package or call it doesn't serve is `unimplemented` |
-| `plan.json` | `Plan` | 7 | A success with every envelope field and integers written as integers; a refusal as `failed_precondition` with its `Failure` detail; a plugin that overruns `timeSeconds` is `deadline_exceeded` |
+| `plan.json` | `Plan` | 11 | A success with every envelope field and integers written as integers, at any size (below); a refusal as `failed_precondition` with its `Failure` detail; a plugin that overruns `timeSeconds` is `deadline_exceeded` |
 | `run-unit.json` | `RunUnit` | 24 | The network rules proto can't state: presence, the host pattern, `hosts` or `replay`, and the recorded responses. A request that keeps them reaches the plugin |
 | `merge.json` | `Merge` | 1 | An answer larger than `outputBytes` is refused as `resource_exhausted`, never cut, with a `Failure` detail that fits |
 
 Warnings the runtime writes itself are compared word for word, so every runtime uses the same wording.
+
+**Integral numbers, at any size.** `Struct` and `Value` hold doubles. A runtime writes every integral double as an integer, whatever its size: `9007199254740994` for 2^53+2, never `9007199254740994.0`; `100000000000000000000` for 1e20, never `1e+20`; and 1e300 as the 301 digits of the double it is. Four `plan.json` cases hold it: the example plugin copies `run` back, and `run.id` is an integer with no maximum, at 2^53, 2^53+2, 1e20 and 1e300. The runner refuses an integral number written with a fraction or an exponent. A negative zero is written `0`. That is a rule only: the runner reads `-0` and `0` alike, so no fixture can hold it.
 
 ## The example plugin each runtime ships
 
@@ -42,7 +44,7 @@ python3 machinery/conformance/connect_run.py --url "$(head -1 server.url)" \
 
 ## Where they came from
 
-These fixtures were moved unchanged from practice-library/machinery-python at commit `233800cf314027681aeb7d41bd61f1ffd67185b2`, from `conformance/fixtures/`. machinery owns them from now on. Changes are made here, and every runtime picks them up with the next contract release.
+These fixtures were moved unchanged from practice-library/machinery-python at commit `233800cf314027681aeb7d41bd61f1ffd67185b2`, from `conformance/fixtures/`. machinery owns them from now on. Changes are made here, and every runtime picks them up with the next contract release. The table records the files as they were moved; `plan.json` has since gained the four integral-number cases.
 
 | File | git blob at 233800c | sha256 |
 |---|---|---|
@@ -51,4 +53,4 @@ These fixtures were moved unchanged from practice-library/machinery-python at co
 | `run-unit.json` | `9cdf206f7b491093d130176c88cae74a68f1ac1d` | `5d373bcc80ef1ffa4b9a3c6a8d50ee8010da46ec34d9b9f2a2f1242db8783640` |
 | `merge.json` | `3fd6fec4d12915d7ffa0dbb02bff87493c2a939c` | `64922272450f5ec22f311855f6b0fbd6831210261a1cf890d9594693d4a44aa0` |
 
-The integral-number cases above 2^53 and the stdio binding are added in later changes of `contract/v1alpha1.1`.
+The stdio binding is added in a later change of `contract/v1alpha1.1`.

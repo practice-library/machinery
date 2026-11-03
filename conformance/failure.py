@@ -72,7 +72,7 @@ def _value(buf: bytes):
             out = None
         elif number == 2 and wire == 1:
             out = struct.unpack("<d", v)[0]
-            out = int(out) if out.is_integer() and abs(out) <= 2 ** 53 else out
+            out = int(out) if out.is_integer() else out
         elif number == 3 and wire == 2:
             out = _text(v)
         elif number == 4 and wire == 0:
