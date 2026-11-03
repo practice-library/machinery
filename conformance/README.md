@@ -1,5 +1,7 @@
 # Conformance
 
+**Runtime fixtures** are in `runtime/`. They check the library a plugin is served through, not a job; see `runtime/README.md`. The fixtures in `connect/` check the fact-refresh job.
+
 A black-box suite for contract v0 plugins. It sends every case in `cases/` to the plugin as its own process (one request on stdin) and checks only what comes back.
 
 ```sh
