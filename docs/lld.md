@@ -51,7 +51,7 @@ Status: **signed by the founder on 2026-11-02**, with docs/hld.md. This version 
 | `UNAVAILABLE` | try again later; the only retryable code, and only with a `Failure` detail | 75 |
 | `DEADLINE_EXCEEDED` | over `timeSeconds` | (killed) |
 
-- **Numbers:** in `Struct` and `Value` they are doubles, exact up to 2^53. Every runtime writes an integral one as an integer at any size (`3`, never `3.0`; `100000000000000000000` for 1e20), which is #29 for Python. The runner refuses an integral number written with a fraction or exponent, and `conformance/runtime/plan.json` holds it at 2^53, 2^53+2, 1e20 and 1e300.
+- **Numbers:** in `Struct` and `Value` they are doubles, exact up to 2^53. Every runtime writes an integral one as an integer at any size (`3`, never `3.0`; `100000000000000000000` for 1e20), which is #29 for Python. The runner refuses an integral number written with a fraction or exponent, and `conformance/runtime/plan.json` holds it at 2^53, 2^53+2, 1e20 and 1e300. Any digits that read back as the same double are right, and numbers are compared as doubles.
 - **Strict decoding:** unknown fields are refused. connect-go discards them by default, so the Go runtime installs a strict codec.
 
 ### 2.2 The fact-refresh job

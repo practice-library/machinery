@@ -104,7 +104,7 @@ python3 conformance/connect_run.py --url http://127.0.0.1:8080 \
 `connect_run.py` POSTs each fixture and checks, besides what `run.py` checks of the data:
 - **time and size:** the answer comes within `caps.timeSeconds` (plus 2 seconds), and its body, success or error, is at most `caps.outputBytes`;
 - **code:** the Connect code is the expected one, from the error body or, without one, inferred from the HTTP status as Connect clients do (404 is `unimplemented`); a Connect error's HTTP status is its code's;
-- **numbers:** a number with an integral value is written as an integer at any size (`3`, never `3.0`; `9007199254740994`, never `9007199254740994.0`), since `Struct` and `Value` hold doubles and every runtime must write them alike;
+- **numbers:** a number with an integral value is written as an integer at any size (`3`, never `3.0`; `9007199254740994`, never `9007199254740994.0`), since `Struct` and `Value` hold doubles and every runtime must write them alike. Any integer that reads back as the same double is right (1e300 as `1` and 300 zeros, or as its exact expansion), and expected numbers are compared as doubles;
 - **success:** HTTP 200 with a JSON envelope that validates, `ok` true;
 - **failure:** `failed_precondition`, `resource_exhausted` and `unavailable` carry a `machinery.plugin.v1alpha1.Failure` detail. A detail is base64 of the binary message; `failure.py` decodes it without a protobuf library. It must validate as an envelope with `ok` false, `data` null and a warning, and the message must be its warnings joined by `; `.
 

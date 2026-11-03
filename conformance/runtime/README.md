@@ -15,7 +15,7 @@ Every runtime repository runs these fixtures at a pinned contract release (`cont
 
 Warnings the runtime writes itself are compared word for word, so every runtime uses the same wording.
 
-**Integral numbers, at any size.** `Struct` and `Value` hold doubles. A runtime writes every integral double as an integer, whatever its size: `9007199254740994` for 2^53+2, never `9007199254740994.0`; `100000000000000000000` for 1e20, never `1e+20`; and 1e300 as the 301 digits of the double it is. Four `plan.json` cases hold it: the example plugin copies `run` back, and `run.id` is an integer with no maximum, at 2^53, 2^53+2, 1e20 and 1e300. The runner refuses an integral number written with a fraction or an exponent. A negative zero is written `0`. That is a rule only: the runner reads `-0` and `0` alike, so no fixture can hold it.
+**Integral numbers, at any size.** `Struct` and `Value` hold doubles. A runtime writes every integral double as an integer, whatever its size: `9007199254740994` for 2^53+2, never `9007199254740994.0`; `100000000000000000000` for 1e20, never `1e+20`. The digits are any integer that reads back as the same double: 1e300 may be written as `1` and 300 zeros (the shortest, as Go writes it) or as the double's exact expansion, `1000000000000000052504…` (as Python writes it). The runner compares numbers as doubles, so both pass. Four `plan.json` cases hold it: the example plugin copies `run` back, and `run.id` is an integer with no maximum, at 2^53, 2^53+2, 1e20 and 1e300. The runner refuses an integral number written with a fraction or an exponent. A negative zero is written `0`. That is a rule only: the runner reads `-0` and `0` alike, so no fixture can hold it.
 
 ## The example plugin each runtime ships
 

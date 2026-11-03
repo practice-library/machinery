@@ -83,7 +83,19 @@ def matches(actual, expected, path="data"):
             if why:
                 return why
         return None
+    if same_double(actual, expected):
+        return None
     return None if actual == expected else f"{path}: expected {expected!r}, got {actual!r}"
+
+
+def same_double(a, b):
+    """Two JSON numbers that read as the same double. A runtime writes an integral double as an integer, with
+    any digits that read back as that double: 1e300 may be 1 and 300 zeros (the shortest) or its exact expansion."""
+    numbers = all(isinstance(x, (int, float)) and not isinstance(x, bool) for x in (a, b))
+    try:
+        return numbers and float(a) == float(b)
+    except OverflowError:  # an integer beyond the largest double is no double at all
+        return False
 
 
 class Validator:

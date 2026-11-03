@@ -7,6 +7,7 @@ import base64
 import http.client
 import io
 import json
+import math
 import os
 import socket
 import struct
@@ -92,6 +93,14 @@ class Success(unittest.TestCase):
                 self.assertIn("write it as an integer", answer(DESCRIBE, 200, body))
         body = json.dumps({"ok": True, "data": dict(DESCRIBED, pacing=2.5), "notRead": [], "warnings": []}).encode()
         self.assertIsNone(answer(DESCRIBE, 200, body))
+
+    def test_an_expected_number_matches_any_digits_that_read_as_the_same_double(self):
+        exact, shortest = int(1e300), 10 ** 300  # Python's rendering and Go's: one double
+        self.assertIsNone(connect_run.matches({"n": exact}, {"n": shortest}))
+        self.assertIsNone(connect_run.matches({"n": shortest}, {"n": exact}))
+        self.assertIsNotNone(connect_run.matches({"n": int(math.nextafter(1e300, math.inf))}, {"n": shortest}))
+        self.assertIsNotNone(connect_run.matches({"n": 10 ** 400}, {"n": 10 ** 400 + 1}))  # beyond any double
+        self.assertIsNotNone(connect_run.matches({"n": True}, {"n": 2}))
 
     def test_an_integral_number_above_2_53_is_written_as_an_integer_too(self):
         big = str(int(1e300)).encode()
