@@ -188,12 +188,15 @@ Let `C` be the full 40-character commit and `A` the archive the bot has built. T
 4. **The tag is new, or already names `C`.** If `refs/tags/contract/v1alpha1.N` is missing, the bot creates the tag object pointing at `C`, then the ref. If it exists and names `C` (a retry), it's used as it is. If it names anything else, stop. Tags are never moved or deleted.
 
 **Binding the release and the uploads to `C` and `A`,** retries included:
-- **Before `gh release create`**, and again before **each** upload, the bot re-resolves the tag to its commit and checks it equals `C`. It recomputes `sha256` of the file it's about to upload and checks it against `A`'s and against `SHA256SUMS`.
+- **Before `gh release create`**, and again before **each** upload, the bot re-resolves the tag to its commit and checks it equals `C`.
+- **Each asset has its own check before it's uploaded:**
+  - **The archive:** `sha256` of the file equals `sha256(A)`, the hash the gate verified in check 3.
+  - **`SHA256SUMS`:** its bytes equal exactly the one expected line, `<sha256(A)>  machinery-contract-v1alpha1.N.tar` followed by a newline. Its own hash is never compared with the archive's.
 - **`gh release create --verify-tag`** never creates a tag, and the release names `C` in its body.
 - **A retry** after a partial publish lists the release's assets first.
-  - An asset already there, with the expected name and size, is downloaded and its sha256 checked.
+  - An asset already there, with the expected name and size, is downloaded and checked again by its own rule above.
   - A matching asset is kept.
-  - A mismatching one stops the release, which is left as a **draft** for a person. Nothing is deleted or overwritten.
+  - A mismatching one, archive or `SHA256SUMS`, stops the release, which is left as a **draft** for a person. Nothing is deleted or overwritten.
 - **The release is created as a draft** and published, which removes the draft flag, only after every asset has passed. A consumer never sees a release with missing or unchecked assets.
 
 If any check fails, nothing further is written.
