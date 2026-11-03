@@ -92,7 +92,7 @@ class Integral(ValueError):
 
 def _number(text: str):
     value = float(text)
-    if value.is_integer() and abs(value) <= 2 ** 53:
+    if value.is_integer():  # at any size: 2^53+2, 1e20 and 1e300 too
         raise Integral(text)
     return value
 
@@ -103,8 +103,8 @@ def _constant(name):
 
 def strict_json(data: bytes):
     """The body's JSON value, or why not. A number with an integral value must be written as an integer
-    (3, never 3.0): proto's Struct and Value hold doubles, and every runtime must write them alike. NaN and
-    Infinity are not JSON."""
+    (3, never 3.0), at any size (9007199254740994, never 9007199254740994.0): proto's Struct and Value hold
+    doubles, and every runtime must write them alike. NaN and Infinity are not JSON."""
     try:
         return json.loads(data.decode("utf-8"), parse_float=_number, parse_constant=_constant), None
     except Integral as err:

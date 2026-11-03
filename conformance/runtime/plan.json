@@ -113,6 +113,90 @@
       "expect": {
         "code": "invalid_argument"
       }
+    },
+    {
+      "name": "an integral double is written as an integer up to 2^53: run.id 2^53",
+      "request": {
+        "input": {
+          "run": {
+            "id": 9007199254740992
+          }
+        }
+      },
+      "expect": {
+        "code": "ok",
+        "envelope": {
+          "ok": true,
+          "data": {
+            "run": {
+              "id": 9007199254740992
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "an integral double above 2^53 is written as an integer at any size: run.id 2^53+2, a double above 2^53",
+      "request": {
+        "input": {
+          "run": {
+            "id": 9007199254740994
+          }
+        }
+      },
+      "expect": {
+        "code": "ok",
+        "envelope": {
+          "ok": true,
+          "data": {
+            "run": {
+              "id": 9007199254740994
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "an integral double above 2^53 is written as an integer at any size: run.id 1e20",
+      "request": {
+        "input": {
+          "run": {
+            "id": 100000000000000000000
+          }
+        }
+      },
+      "expect": {
+        "code": "ok",
+        "envelope": {
+          "ok": true,
+          "data": {
+            "run": {
+              "id": 100000000000000000000
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "an integral double above 2^53 is written as an integer at any size: run.id 1e300, in any digits that read as that double",
+      "request": {
+        "input": {
+          "run": {
+            "id": 1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+          }
+        }
+      },
+      "expect": {
+        "code": "ok",
+        "envelope": {
+          "ok": true,
+          "data": {
+            "run": {
+              "id": 1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+            }
+          }
+        }
+      }
     }
   ]
 }

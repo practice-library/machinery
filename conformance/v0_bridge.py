@@ -65,8 +65,8 @@ def strict(body: bytes):
 
 
 def integers(value):
-    """Integral floats as integers, as a proto runtime writes the doubles of Struct and Value (3, never 3.0)."""
-    if isinstance(value, float) and value.is_integer() and abs(value) <= 2 ** 53:
+    """Integral floats as integers at any size, as a proto runtime writes the doubles of Struct and Value (3, never 3.0)."""
+    if isinstance(value, float) and value.is_integer():
         return int(value)
     if isinstance(value, list):
         return [integers(v) for v in value]

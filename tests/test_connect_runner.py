@@ -3,11 +3,14 @@ it one way, and the Failure codec (conformance/failure.py). HTTP is stubbed: tes
 Each check is also mutated in tests/guards.py."""
 from __future__ import annotations
 
+import base64
 import http.client
 import io
 import json
+import math
 import os
 import socket
+import struct
 import sys
 import threading
 import time
@@ -90,6 +93,27 @@ class Success(unittest.TestCase):
                 self.assertIn("write it as an integer", answer(DESCRIBE, 200, body))
         body = json.dumps({"ok": True, "data": dict(DESCRIBED, pacing=2.5), "notRead": [], "warnings": []}).encode()
         self.assertIsNone(answer(DESCRIBE, 200, body))
+
+    def test_an_expected_number_matches_any_digits_that_read_as_the_same_double(self):
+        exact, shortest = int(1e300), 10 ** 300  # Python's rendering and Go's: one double
+        self.assertIsNone(connect_run.matches({"n": exact}, {"n": shortest}))
+        self.assertIsNone(connect_run.matches({"n": shortest}, {"n": exact}))
+        self.assertIsNotNone(connect_run.matches({"n": int(math.nextafter(1e300, math.inf))}, {"n": shortest}))
+        self.assertIsNotNone(connect_run.matches({"n": 10 ** 400}, {"n": 10 ** 400 + 1}))  # beyond any double
+        self.assertIsNotNone(connect_run.matches({"n": True}, {"n": 2}))
+
+    def test_an_integral_number_above_2_53_is_written_as_an_integer_too(self):
+        big = str(int(1e300)).encode()
+        for written in (b"9007199254740992.0", b"9007199254740994.0", b"1e20", b"100000000000000000000.0", b"1e300",
+                        b"1.0e+300", b"-9007199254740994.0"):
+            with self.subTest(written=written):
+                body = b'{"ok": true, "data": {"protocol": "x", "n": ' + written + b'}, "notRead": [], "warnings": []}'
+                self.assertIn("write it as an integer", answer(DESCRIBE, 200, body))
+        for written in (b"9007199254740992", b"9007199254740994", b"100000000000000000000", big, b"-" + big):
+            with self.subTest(written=written):
+                value, why = connect_run.strict_json(b'{"n": ' + written + b'}')
+                self.assertIsNone(why)
+                self.assertEqual(value["n"], int(written))
 
     def test_the_expected_envelope_is_matched_against_the_response(self):
         case = dict(DESCRIBE, expect={"code": "ok", "envelope": {"ok": True, "data": {"name": "other"}}})
@@ -254,6 +278,28 @@ class Codec(unittest.TestCase):
         for value in ("!!", "CP8", "IgI", "IAE", "JQ", "AAA", "IgH/", "GgIYAQ", "EgYqBAoCGAE", "EgQqAhAB", "EgQyAhAB", 7):
             with self.subTest(value=value), self.assertRaises(failure.Malformed):
                 failure.decode(value)
+
+    def test_an_integral_double_decodes_as_an_integer_at_any_size(self):
+        # A Failure's data is a Value; the decoder reads a number_value (field 2, a little-endian double) in it
+        # as a runner would, then the runner refuses any data but null (Errors). The decoding is checked here.
+        def data_of(x):
+            value = failure._key(2, 1) + struct.pack("<d", x)
+            return failure.decode(base64.b64encode(bytes(failure._len(2, value))).decode())["data"]
+        for n in (3, 2 ** 53, 2 ** 53 + 2, 10 ** 20, int(1e300), -(2 ** 53 + 2)):
+            with self.subTest(n=n):
+                self.assertIs(type(data_of(float(n))), int)
+                self.assertEqual(data_of(float(n)), int(float(n)))
+        self.assertEqual(data_of(2.5), 2.5)
+
+
+class BridgeIntegers(unittest.TestCase):
+    def test_the_bridge_writes_integral_doubles_as_integers_at_any_size(self):
+        for n in (3.0, 2.0 ** 53, 2.0 ** 53 + 2, 1e20, 1e300, -1e20):
+            with self.subTest(n=n):
+                out = v0_bridge.integers({"a": [n]})["a"][0]
+                self.assertIs(type(out), int)
+                self.assertEqual(out, int(n))
+        self.assertEqual(v0_bridge.integers({"a": 2.5}), {"a": 2.5})
 
 
 
