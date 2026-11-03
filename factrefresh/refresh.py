@@ -86,7 +86,8 @@ class Refresher:
         self.deadline = deadline  # no request starts that could still be running at this time
         self.ignore_interval = ignore_interval  # every fact is due, whatever minIntervalDays; nothing else changes
         self.run_requests = 0  # across every graph of the run
-        self.host_requests: Dict[str, int] = {}
+        # Each policy entry (host, vendor) has its own cap. Pacing is per host name, whichever graph asks.
+        self.host_requests: Dict[Tuple[str, str], int] = {}
         self.last_request: Dict[str, datetime] = {}
         self.graph_requests = 0
         self.skipped: List[Tuple[str, str, str]] = []
@@ -95,7 +96,7 @@ class Refresher:
     def _request(self, host: Host, url: str) -> Response:
         if self.run_requests >= self.policy.max_requests:
             raise CapReached("run")
-        if self.host_requests.get(host.host, 0) >= host.max_requests:
+        if self.host_requests.get((host.host, host.vendor), 0) >= host.max_requests:
             raise CapReached("host")
         last = self.last_request.get(host.host)
         wait = self.pace - (self.clock.now() - last).total_seconds() if last is not None else 0.0
@@ -108,7 +109,7 @@ class Refresher:
             self.clock.sleep(wait)
         self.run_requests += 1
         self.graph_requests += 1
-        self.host_requests[host.host] = self.host_requests.get(host.host, 0) + 1
+        self.host_requests[(host.host, host.vendor)] = self.host_requests.get((host.host, host.vendor), 0) + 1
         headers = {"User-Agent": self.policy.user_agent, "Accept": "text/html, text/plain, text/markdown, */*;q=0.1"}
         try:
             return self.transport.get(url, headers, host.timeout_seconds, host.max_bytes)
@@ -131,13 +132,11 @@ class Refresher:
 
     # -- robots.txt --------------------------------------------------------------------------------------
     def _robots(self, host: Host, urls: List[str]) -> Tuple[Optional[dict], Optional[robotstxt.Rules], Optional[str]]:
-        """(record, rules, abort reason); record is None when the cap was reached before it was read."""
+        """(record, rules, abort reason). Raises CapReached when a cap stops it before robots.txt is read."""
         url, at_host = f"https://{host.host}/robots.txt", host
         for _hop in range(MAX_HOPS + 1):
             try:
                 resp = self._request(at_host, url)
-            except CapReached:
-                return None, None, None
             except TransportError as err:
                 rec = {"host": host.host, "fetchedAt": stamp(self.clock.now()), "verdict": "unreachable"}
                 return rec, None, f"robots.txt of {host.host} could not be read: {err}"
@@ -283,9 +282,12 @@ class Refresher:
         aborts: List[str] = []
         listed = {h.host: h for _, h in due}  # this graph's entry for each host it reads
         for name in sorted(listed):
-            rec, rule, reason = self._robots(listed[name], [n["source"] for n, h in due if h.host == name])
-            if rec is None:
-                break  # run-wide cap reached: hosts not read are not fetched
+            try:
+                rec, rule, reason = self._robots(listed[name], [n["source"] for n, h in due if h.host == name])
+            except CapReached as cap:
+                if cap.scope == "run":
+                    break  # run-wide cap reached: hosts not read are not fetched
+                continue  # this graph's own cap for the host is spent: its facts there wait for the next run
             robots.append(rec)
             if reason:
                 aborts.append(reason)
