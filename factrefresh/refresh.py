@@ -281,8 +281,9 @@ class Refresher:
         robots: List[dict] = []
         rules: Dict[str, robotstxt.Rules] = {}
         aborts: List[str] = []
-        for name in sorted({h.host for _, h in due}):
-            rec, rule, reason = self._robots(self.policy.hosts[name], [n["source"] for n, h in due if h.host == name])
+        listed = {h.host: h for _, h in due}  # this graph's entry for each host it reads
+        for name in sorted(listed):
+            rec, rule, reason = self._robots(listed[name], [n["source"] for n, h in due if h.host == name])
             if rec is None:
                 break  # run-wide cap reached: hosts not read are not fetched
             robots.append(rec)

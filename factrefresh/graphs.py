@@ -7,7 +7,7 @@ from __future__ import annotations
 import json
 import os
 from dataclasses import dataclass
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 
 @dataclass(frozen=True)
@@ -27,12 +27,11 @@ class Policy:
     max_requests: int
     retry_after_max: int
     unreadable_runs_before_issue: int
-    hosts: Dict[str, Host]
+    hosts: Dict[Tuple[str, str], Host]  # (host, vendor): one host may be listed for several vendors
 
     def host_for(self, host: str, vendor: str) -> Optional[Host]:
         """The listed host, only when it is listed for this vendor."""
-        h = self.hosts.get(host)
-        return h if h is not None and h.vendor == vendor else None
+        return self.hosts.get((host, vendor))
 
 
 def load_policy(root: str) -> Policy:
@@ -40,7 +39,7 @@ def load_policy(root: str) -> Policy:
         raw = json.load(f)
     hosts = {}
     for h in raw["hosts"]:
-        hosts[h["host"]] = Host(
+        hosts[(h["host"], h["vendor"])] = Host(
             host=h["host"], vendor=h["vendor"], format=h["format"],
             max_requests=int(h["maxRequestsPerRun"]), min_interval_days=int(h["minIntervalDays"]),
             max_bytes=int(h["maxBytes"]), timeout_seconds=int(h["timeoutSeconds"]),

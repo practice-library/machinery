@@ -55,6 +55,24 @@ class OnlyListedHosts(unittest.TestCase):
         self.assertEqual(r["outcome"], "unreadable")
         self.assertTrue(r["reason"].startswith("blocked:"))
 
+    def test_a_host_listed_for_two_vendors_serves_both(self):
+        # One host may be listed once per graph (policy/sources.json allows it). Each graph keeps its own
+        # entry, whichever is listed first or last (machinery#49).
+        for first in ("example", "other"):
+            with self.subTest(listed_first=first), GraphsCopy() as root:
+                def add(data):
+                    other = next(h for h in data["hosts"] if h["host"] == "docs.other.example.org")
+                    mine = dict(other, vendor="example")
+                    data["hosts"].remove(other)
+                    data["hosts"] += [mine, other] if first == "example" else [other, mine]
+                edit_policy(root, add)
+                example, t, _ = run(root=root)
+                borrowed = by_node(example)["product.example.borrowed"]
+                self.assertNotIn("not listed", borrowed.get("reason", ""))
+                self.assertTrue([u for u in t.urls() if u == "https://docs.other.example.org/widget"])
+                other, _, _ = run(root=root, graph="vendors/other")
+                self.assertNotIn("not listed", by_node(other)["product.other.widget"].get("reason", ""))
+
     def test_host_listed_for_another_vendor_is_not_fetched_for_this_one(self):
         report, t, _ = run()
         self.assertFalse([u for u in t.urls() if "docs.other.example.org" in u])

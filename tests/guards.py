@@ -20,8 +20,13 @@ B, W = "gen/python/build_wheel.py", "tests.test_gen_wheel"
 GUARDS = [
     # (what the guard keeps true, file, code, code without the guard, the test that must then fail)
     ("a host listed for another vendor is not fetched", "factrefresh/graphs.py",
-     "return h if h is not None and h.vendor == vendor else None", "return h",
+     "return self.hosts.get((host, vendor))",
+     "return next((h for (n, _), h in self.hosts.items() if n == host), None)",
      f"{T}.OnlyListedHosts.test_host_listed_for_another_vendor_is_not_fetched_for_this_one"),
+    ("a host listed for several vendors keeps every entry", "factrefresh/graphs.py",
+     'hosts[(h["host"], h["vendor"])] = Host(',
+     'hosts = {k: v for k, v in hosts.items() if k[0] != h["host"]}; hosts[(h["host"], h["vendor"])] = Host(',
+     f"{T}.OnlyListedHosts.test_a_host_listed_for_two_vendors_serves_both"),
     ("a redirect to an unlisted host is not followed", R,
      "if listed is None:\n                    return Page(", "if False:\n                    return Page(",
      f"{T}.OnlyListedHosts.test_redirect_to_an_unlisted_host_is_not_followed"),
