@@ -37,7 +37,7 @@ GUARDS = [
      f"{T}.OnlyListedHosts.test_a_host_cap_spent_before_robots_skips_only_that_host"),
     ("facts behind a spent host cap are named, not dropped", R,
      "self.skipped.append((graph, node[\"id\"], f\"waits: the cap of",
-     "(graph, node[\"id\"], f\"waits: the cap of",
+     "(lambda *_: None)((graph, node[\"id\"], f\"waits: the cap of",
      f"{T}.OnlyListedHosts.test_a_host_cap_spent_before_robots_skips_only_that_host"),
     ("a redirect to an unlisted host is not followed", R,
      "if listed is None:\n                    return Page(", "if False:\n                    return Page(",
