@@ -201,7 +201,7 @@ jobs:
           grep -qxF "$want" lib/js/README.md || { echo "::error file=lib/js/README.md::not $want"; exit 1; }
 
   leak-scan:
-    uses: practice-library/.github/.github/workflows/leak-scan.yml@75a03317883e16f7ad93f1239dc53c9d0e1c4cc1 # v2.4.0
+    uses: practice-library/.github/.github/workflows/leak-scan.yml@f49b1a054c45a99b5874ff4ef34f77269c621b72 # v3.0.0
 
   denylist:
     permissions:
