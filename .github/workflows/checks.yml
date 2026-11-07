@@ -207,7 +207,7 @@ jobs:
     permissions:
       contents: read
       pull-requests: read
-    uses: practice-library/.github/.github/workflows/guard.yml@75a03317883e16f7ad93f1239dc53c9d0e1c4cc1 # v2.4.0
+    uses: practice-library/.github/.github/workflows/guard.yml@f49b1a054c45a99b5874ff4ef34f77269c621b72 # v3.0.0
     with:
       guard: denylist
 
@@ -215,7 +215,7 @@ jobs:
     permissions:
       contents: read
       pull-requests: read
-    uses: practice-library/.github/.github/workflows/guard.yml@75a03317883e16f7ad93f1239dc53c9d0e1c4cc1 # v2.4.0
+    uses: practice-library/.github/.github/workflows/guard.yml@f49b1a054c45a99b5874ff4ef34f77269c621b72 # v3.0.0
     with:
       guard: removed-paths
 
@@ -223,7 +223,7 @@ jobs:
     permissions:
       contents: read
       pull-requests: read
-    uses: practice-library/.github/.github/workflows/guard.yml@75a03317883e16f7ad93f1239dc53c9d0e1c4cc1 # v2.4.0
+    uses: practice-library/.github/.github/workflows/guard.yml@f49b1a054c45a99b5874ff4ef34f77269c621b72 # v3.0.0
     with:
       guard: release-note
 
@@ -231,7 +231,7 @@ jobs:
     permissions:
       contents: read
       pull-requests: read
-    uses: practice-library/.github/.github/workflows/guard.yml@75a03317883e16f7ad93f1239dc53c9d0e1c4cc1 # v2.4.0
+    uses: practice-library/.github/.github/workflows/guard.yml@f49b1a054c45a99b5874ff4ef34f77269c621b72 # v3.0.0
     with:
       guard: schema-loosening
 
